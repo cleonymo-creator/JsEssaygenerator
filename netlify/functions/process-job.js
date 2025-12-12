@@ -1,8 +1,11 @@
 // Process job function - calls Claude and saves result
 const https = require('https');
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 
 exports.handler = async (event, context) => {
+    // Connect Lambda to enable automatic Blobs configuration
+    connectLambda(event);
+    
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
     }
@@ -16,7 +19,7 @@ exports.handler = async (event, context) => {
         
         console.log('Processing job:', jobId);
         
-        // Get the store (automatic config in Functions)
+        // Get the store
         store = getStore('essay-jobs');
         
         // Get the job data

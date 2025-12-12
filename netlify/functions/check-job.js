@@ -1,7 +1,10 @@
 // Check job status function
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 
 exports.handler = async (event, context) => {
+    // Connect Lambda to enable automatic Blobs configuration
+    connectLambda(event);
+    
     if (event.httpMethod !== 'GET') {
         return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
     }
@@ -14,7 +17,6 @@ exports.handler = async (event, context) => {
     try {
         console.log('Checking job:', jobId);
         
-        // Use automatic configuration
         const store = getStore('essay-jobs');
         const result = await store.get(jobId, { type: 'json' });
 
