@@ -1147,7 +1147,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             `;
         }
 
-        // Generation - calls background function directly, polls for completion
+        // Generation with job queue and polling
         async function generateConfig() {
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
@@ -1164,49 +1164,36 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                     throw new Error(`Payload too large (${payloadSizeMB}MB). Please remove PDF files and paste text instead.`);
                 }
 
-                // Call the background function directly
-                // It will return immediately with a jobId, then process in background
-                console.log('Calling background function...');
-                updateLoadingText('Processing with Claude Sonnet...');
-                
-                const response = await fetch('/.netlify/functions/generate-background', {
+                // Start the job
+                console.log('Starting job...');
+                const startResponse = await fetch('/.netlify/functions/start-job', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: payloadString
                 });
 
-                // If we get a response directly (function completed in time)
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('Got direct response:', result);
-                    
-                    if (result.completed && result.config) {
-                        generatedConfig = result.config;
-                        document.getElementById('outputPreview').textContent = generatedConfig;
-                        goToSection(5);
-                        return;
-                    }
-                    
-                    if (result.error) {
-                        throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error));
-                    }
-                    
-                    // If we got a jobId but not completed, poll for it
-                    if (result.jobId) {
-                        const finalResult = await pollForResult(result.jobId);
-                        if (finalResult.config) {
-                            generatedConfig = finalResult.config;
-                            document.getElementById('outputPreview').textContent = generatedConfig;
-                            goToSection(5);
-                            return;
-                        }
-                        if (finalResult.error) {
-                            throw new Error(typeof finalResult.error === 'string' ? finalResult.error : JSON.stringify(finalResult.error));
-                        }
-                    }
+                if (!startResponse.ok) {
+                    const errorText = await startResponse.text();
+                    throw new Error(`Failed to start: ${startResponse.status} - ${errorText}`);
+                }
+
+                const { jobId } = await startResponse.json();
+                console.log('Job started:', jobId);
+                updateLoadingText('Processing with Claude Sonnet...');
+
+                // Poll for result
+                const result = await pollForResult(jobId);
+                
+                if (result.status === 'error') {
+                    throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error));
+                }
+
+                if (result.config) {
+                    generatedConfig = result.config;
+                    document.getElementById('outputPreview').textContent = generatedConfig;
+                    goToSection(5);
                 } else {
-                    const errorText = await response.text();
-                    throw new Error(`Function error: ${response.status} - ${errorText}`);
+                    throw new Error('No config in result');
                 }
 
             } catch (error) {
@@ -1229,10 +1216,12 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 console.log(`Polling ${i + 1}/${maxAttempts}...`);
                 
                 try {
-                    const response = await fetch(`/.netlify/functions/check-status?jobId=${encodeURIComponent(jobId)}`);
+                    const response = await fetch(`/.netlify/functions/check-job?jobId=${encodeURIComponent(jobId)}`);
                     if (response.ok) {
                         const result = await response.json();
-                        if (result.completed) {
+                        console.log('Status:', result.status);
+                        
+                        if (result.status === 'completed' || result.status === 'error') {
                             return result;
                         }
                     }
