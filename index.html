@@ -916,12 +916,32 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         Essay Config Generator • Powered by Claude AI
     </footer>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         // State management
         let currentSection = 1;
         let uploadedSourceFiles = [];
         let uploadedMarkSchemeFile = null;
         let generatedConfig = '';
+
+        // Extract text from PDF using PDF.js
+        async function extractPdfText(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n\n';
+            }
+            
+            return fullText.trim();
+        }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -999,20 +1019,69 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                     continue;
                 }
 
-                const fileData = {
-                    name: file.name,
-                    type: file.type,
-                    content: await readFileAsBase64(file)
-                };
+                // Show processing indicator
+                showProcessingIndicator(type, `Processing ${file.name}...`);
 
-                if (type === 'source') {
-                    uploadedSourceFiles.push(fileData);
-                    updateSourceFilesList();
-                } else {
-                    uploadedMarkSchemeFile = fileData;
-                    updateMarkSchemeDisplay();
+                try {
+                    let fileData;
+                    
+                    if (file.type === 'application/pdf') {
+                        // Extract text from PDF instead of sending raw PDF
+                        console.log(`Extracting text from PDF: ${file.name}`);
+                        const extractedText = await extractPdfText(file);
+                        console.log(`Extracted ${extractedText.length} characters from ${file.name}`);
+                        
+                        fileData = {
+                            name: file.name,
+                            type: 'text/plain',
+                            extractedText: extractedText,
+                            originalType: 'application/pdf'
+                        };
+                    } else if (file.type.startsWith('image/')) {
+                        // For images, keep as base64
+                        fileData = {
+                            name: file.name,
+                            type: file.type,
+                            content: await readFileAsBase64(file)
+                        };
+                    } else {
+                        alert(`Unsupported file type: ${file.name}`);
+                        continue;
+                    }
+
+                    if (type === 'source') {
+                        uploadedSourceFiles.push(fileData);
+                        updateSourceFilesList();
+                    } else {
+                        uploadedMarkSchemeFile = fileData;
+                        updateMarkSchemeDisplay();
+                    }
+                } catch (error) {
+                    console.error('File processing error:', error);
+                    alert(`Error processing ${file.name}: ${error.message}`);
+                } finally {
+                    hideProcessingIndicator(type);
                 }
             }
+        }
+
+        function showProcessingIndicator(type, text) {
+            const containerId = type === 'source' ? 'sourceFilesList' : 'markSchemeFileDisplay';
+            const container = document.getElementById(containerId);
+            let indicator = document.getElementById(`processing-${type}`);
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = `processing-${type}`;
+                indicator.className = 'uploaded-file';
+                indicator.style.opacity = '0.7';
+            }
+            indicator.innerHTML = `<span class="uploaded-file-icon">⏳</span><span class="uploaded-file-name">${text}</span>`;
+            container.appendChild(indicator);
+        }
+
+        function hideProcessingIndicator(type) {
+            const indicator = document.getElementById(`processing-${type}`);
+            if (indicator) indicator.remove();
         }
 
         function readFileAsBase64(file) {
@@ -1031,8 +1100,8 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             const container = document.getElementById('sourceFilesList');
             container.innerHTML = uploadedSourceFiles.map((file, index) => `
                 <div class="uploaded-file">
-                    <span class="uploaded-file-icon">📄</span>
-                    <span class="uploaded-file-name">${file.name}</span>
+                    <span class="uploaded-file-icon">${file.extractedText ? '📝' : '📄'}</span>
+                    <span class="uploaded-file-name">${file.name}${file.extractedText ? ' (text extracted)' : ''}</span>
                     <button class="uploaded-file-remove" onclick="removeSourceFile(${index})">&times;</button>
                 </div>
             `).join('');
@@ -1048,8 +1117,8 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             if (uploadedMarkSchemeFile) {
                 container.innerHTML = `
                     <div class="uploaded-file">
-                        <span class="uploaded-file-icon">📋</span>
-                        <span class="uploaded-file-name">${uploadedMarkSchemeFile.name}</span>
+                        <span class="uploaded-file-icon">${uploadedMarkSchemeFile.extractedText ? '📝' : '📋'}</span>
+                        <span class="uploaded-file-name">${uploadedMarkSchemeFile.name}${uploadedMarkSchemeFile.extractedText ? ' (text extracted)' : ''}</span>
                         <button class="uploaded-file-remove" onclick="removeMarkSchemeFile()">&times;</button>
                     </div>
                 `;
@@ -1247,6 +1316,32 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         }
 
         function buildPayload() {
+            // Process source files - convert extracted PDF text to sourceMaterial
+            let additionalSourceText = '';
+            const imageFiles = [];
+            
+            for (const file of uploadedSourceFiles) {
+                if (file.extractedText) {
+                    // PDF was converted to text
+                    additionalSourceText += `\n\n--- Content from ${file.name} ---\n${file.extractedText}`;
+                } else if (file.content) {
+                    // Image file - keep as is
+                    imageFiles.push(file);
+                }
+            }
+
+            // Combine manual source material with extracted PDF text
+            const combinedSourceMaterial = document.getElementById('sourceMaterial').value + additionalSourceText;
+
+            // Process mark scheme file
+            let markSchemeText = document.getElementById('markScheme').value;
+            if (uploadedMarkSchemeFile?.extractedText) {
+                markSchemeText += `\n\n--- Content from ${uploadedMarkSchemeFile.name} ---\n${uploadedMarkSchemeFile.extractedText}`;
+            }
+
+            // Only include mark scheme file if it's an image (not extracted PDF)
+            const markSchemeFileData = uploadedMarkSchemeFile?.content ? uploadedMarkSchemeFile : null;
+
             return {
                 subject: document.getElementById('subject').value,
                 yearGroup: document.getElementById('yearGroup').value,
@@ -1255,10 +1350,10 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 timeAllowed: document.getElementById('timeAllowed').value ? parseInt(document.getElementById('timeAllowed').value) : null,
                 paperName: document.getElementById('paperName').value,
                 examQuestion: document.getElementById('examQuestion').value,
-                sourceMaterial: document.getElementById('sourceMaterial').value,
-                sourceFiles: uploadedSourceFiles,
-                markScheme: document.getElementById('markScheme').value,
-                markSchemeFile: uploadedMarkSchemeFile,
+                sourceMaterial: combinedSourceMaterial,
+                sourceFiles: imageFiles, // Only images now, PDFs converted to text
+                markScheme: markSchemeText,
+                markSchemeFile: markSchemeFileData, // Only if it's an image
                 additionalNotes: document.getElementById('additionalNotes').value,
                 minWords: parseInt(document.getElementById('minWords').value),
                 targetWords: parseInt(document.getElementById('targetWords').value),
