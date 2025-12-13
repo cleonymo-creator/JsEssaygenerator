@@ -27,14 +27,6 @@ exports.handler = async (event, context) => {
         
         console.log('Job saved to Blobs');
 
-        // Trigger the processor function (fire and forget)
-        const siteUrl = process.env.URL || `https://${event.headers.host}`;
-        fetch(`${siteUrl}/.netlify/functions/process-job`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jobId })
-        }).catch(() => {});
-
         return {
             statusCode: 202,
             headers: { 'Content-Type': 'application/json' },

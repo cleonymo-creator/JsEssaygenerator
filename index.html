@@ -1164,7 +1164,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                     throw new Error(`Payload too large (${payloadSizeMB}MB). Please remove PDF files and paste text instead.`);
                 }
 
-                // Start the job
+                // Start the job (saves to Blobs)
                 console.log('Starting job...');
                 const startResponse = await fetch('/.netlify/functions/start-job', {
                     method: 'POST',
@@ -1180,6 +1180,14 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 const { jobId } = await startResponse.json();
                 console.log('Job started:', jobId);
                 updateLoadingText('Processing with Claude Sonnet...');
+
+                // Trigger the processor from the client (fire and forget)
+                console.log('Triggering processor...');
+                fetch('/.netlify/functions/process-job', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId })
+                }).catch(err => console.log('Processor trigger sent'));
 
                 // Poll for result
                 const result = await pollForResult(jobId);
