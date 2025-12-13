@@ -1,4 +1,5 @@
-// Process job function - calls Claude and saves result
+// Process job background function - calls Claude and saves result
+// Named with -background suffix to enable 15 minute timeout
 const https = require('https');
 const { getStore, connectLambda } = require('@netlify/blobs');
 
@@ -6,9 +7,8 @@ exports.handler = async (event, context) => {
     // Connect Lambda to enable automatic Blobs configuration
     connectLambda(event);
     
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-    }
+    // Background functions don't return responses to clients
+    // They just process and save results
 
     let jobId;
     let store;
@@ -26,7 +26,7 @@ exports.handler = async (event, context) => {
         const job = await store.get(jobId, { type: 'json' });
         if (!job) {
             console.error('Job not found:', jobId);
-            return { statusCode: 404, body: 'Job not found' };
+            return; // Background functions don't return to client
         }
 
         const body = job.input;
@@ -35,7 +35,7 @@ exports.handler = async (event, context) => {
         const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) {
             await store.setJSON(jobId, { status: 'error', error: 'ANTHROPIC_API_KEY not configured' });
-            return { statusCode: 200, body: 'Error saved' };
+            return;
         }
 
         console.log('Calling Claude Sonnet...');
@@ -46,7 +46,7 @@ exports.handler = async (event, context) => {
         if (claudeData.error) {
             console.error('Claude error:', JSON.stringify(claudeData.error));
             await store.setJSON(jobId, { status: 'error', error: claudeData.error });
-            return { statusCode: 200, body: 'Error saved' };
+            return;
         }
 
         const config = extractJavaScript(claudeData.content[0].text);
@@ -59,17 +59,17 @@ exports.handler = async (event, context) => {
             timestamp: Date.now()
         });
 
-        console.log('Result saved');
-        return { statusCode: 200, body: 'Done' };
+        console.log('Result saved successfully');
 
     } catch (error) {
         console.error('Error:', error);
         if (store && jobId) {
             try {
                 await store.setJSON(jobId, { status: 'error', error: error.message });
-            } catch (e) {}
+            } catch (e) {
+                console.error('Failed to save error state:', e);
+            }
         }
-        return { statusCode: 500, body: error.message };
     }
 };
 
@@ -77,7 +77,7 @@ function makeRequest(apiKey, messages) {
     return new Promise((resolve, reject) => {
         const requestBody = JSON.stringify({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 16000,
+            max_tokens: 8000,
             messages: messages
         });
 
@@ -140,15 +140,7 @@ function buildMessages(data) {
         content.push({ type: 'text', text: `[Mark scheme: ${markSchemeFile.name}]` });
     }
 
-    const prompt = `You are an expert educational content designer specialising in UK examination systems. Your task is to create a guided essay writing configuration that PRECISELY reflects the actual mark scheme provided.
-
-## CRITICAL INSTRUCTION: MARK SCHEME FIDELITY
-The mark scheme provided below is the AUTHORITATIVE source for how this essay should be assessed. You must:
-1. Preserve the EXACT assessment objectives (AOs) or criteria categories used in the mark scheme
-2. Include ALL level/band descriptors - not just the top band, but every level from lowest to highest
-3. Use the EXACT mark allocations from the mark scheme
-4. Retain the specific language and terminology from the mark scheme
-5. DO NOT impose a generic structure (content/analysis/structure/expression) - use whatever structure the mark scheme actually specifies
+    const prompt = `You are an expert educational content designer. Create a guided essay writing configuration.
 
 ## EXAM INFORMATION
 - Subject: ${subject || 'Not specified'}
@@ -163,8 +155,8 @@ ${examQuestion || 'No question provided'}
 
 ${sourceMaterial ? `## SOURCE MATERIAL\n${sourceMaterial}\n` : ''}
 
-## MARK SCHEME (PRESERVE IN FULL)
-${markScheme || 'No mark scheme provided - create appropriate criteria for this subject and exam board.'}
+## MARK SCHEME
+${markScheme || 'No mark scheme provided - create appropriate criteria for this subject.'}
 
 ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 
@@ -181,55 +173,7 @@ ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 - The essay ID should be lowercase with hyphens (e.g., 'creative-writing-sunset')
 
 ## TASK
-Generate a complete essay configuration. The structure must reflect what the mark scheme actually rewards.
-
-### CRITICAL: gradingCriteria Structure
-The gradingCriteria object must EXACTLY mirror the assessment objectives or criteria from the mark scheme. Examples:
-
-If the mark scheme uses AO1/AO2/AO3/AO4:
-\`\`\`
-gradingCriteria: {
-  AO1: { 
-    weight: [actual marks], 
-    maxMarks: [from scheme],
-    description: "[exact AO1 description from mark scheme]",
-    levelDescriptors: {
-      level1: { marks: "1-2", descriptor: "[exact level 1 text]" },
-      level2: { marks: "3-4", descriptor: "[exact level 2 text]" },
-      level3: { marks: "5-6", descriptor: "[exact level 3 text]" },
-      // ... all levels
-    }
-  },
-  // ... other AOs
-}
-\`\`\`
-
-If the mark scheme uses "Content and Organisation" / "Technical Accuracy":
-\`\`\`
-gradingCriteria: {
-  contentAndOrganisation: {
-    weight: [actual marks],
-    maxMarks: [from scheme],
-    description: "[description from mark scheme]",
-    levelDescriptors: {
-      level1: { marks: "1-6", descriptor: "[exact text]" },
-      level2: { marks: "7-12", descriptor: "[exact text]" },
-      level3: { marks: "13-18", descriptor: "[exact text]" },
-      level4: { marks: "19-24", descriptor: "[exact text]" }
-    }
-  },
-  technicalAccuracy: {
-    weight: [actual marks],
-    maxMarks: [from scheme],
-    description: "[description from mark scheme]",
-    levelDescriptors: {
-      // all levels with exact descriptors
-    }
-  }
-}
-\`\`\`
-
-Output ONLY valid JavaScript using this format:
+Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid JavaScript using this EXACT format:
 
 \`\`\`javascript
 window.ESSAYS = window.ESSAYS || {};
@@ -238,92 +182,63 @@ window.ESSAYS['[essay-id-here]'] = {
   title: "[Title for this essay task]",
   subject: "${subject || 'Subject'}",
   yearGroup: "${yearGroup || 'Year'}",
-  examBoard: "${examBoard || 'Exam Board'}",
-  essayTitle: "[The exam question - full text]",
-  instructions: "[Clear instructions for students explaining the task and how they will be assessed]",
-  
-  // FULL MARK SCHEME - preserve complete text for reference
-  fullMarkScheme: \`[Insert the COMPLETE mark scheme here - all levels, all criteria, all descriptors. This is the authoritative reference for assessment.]\`,
-  
-  // Original task info for student reference
+  essayTitle: "[The exam question]",
+  instructions: "[Clear instructions for students]",
   originalTask: \`## Exam Question
-[Full question text]
+[Full question]
 
-## How You Will Be Assessed
-[Summary of the assessment criteria from the mark scheme, explaining to students what examiners are looking for]\`,
-
+## Mark Scheme Summary
+[Key criteria]\`,
   maxAttempts: ${maxAttempts || 3},
   minWordsPerParagraph: ${minWords || 80},
   targetWordsPerParagraph: ${targetWords || 150},
   teacherPassword: "${teacherPassword || 'teacher123'}",
-  totalMarks: ${totalMarks || 40},
-  
   paragraphs: [
     {
       id: 1,
-      title: "[Paragraph title reflecting essay structure]",
+      title: "Introduction",
       type: "introduction",
-      learningMaterial: \`## Writing This Section
+      learningMaterial: \`## Writing Your Introduction
 
-[Detailed, specific guidance for this essay that connects to the mark scheme criteria...]
-
-### What the Mark Scheme Rewards
-[Specific connection to relevant assessment objectives]
+[Detailed, specific guidance for this essay...]
 
 ### Key Points to Cover
-- [Specific point 1 linked to mark scheme]
-- [Specific point 2 linked to mark scheme]
+- [Specific point 1]
+- [Specific point 2]
 
 ### Sentence Starters
 - "[Relevant starter]..."
-- "[Another starter]..."
-
-### Common Mistakes to Avoid
-- [Mistake that loses marks according to the scheme]
 \`,
-      writingPrompt: "[Clear instruction telling students what to write]",
-      keyPoints: ["[Specific criterion from mark scheme this paragraph addresses]"],
-      assessmentFocus: ["[Which AO or criteria this paragraph primarily targets]"],
+      writingPrompt: "[Clear instruction]",
+      keyPoints: ["[Mark scheme criterion]"],
       exampleQuotes: [],
-      points: [marks allocated to this section]
+      points: [marks]
     },
-    // Additional body paragraphs - number should reflect what the question requires
-    // Each with detailed learningMaterial connecting to the actual mark scheme
+    // More body paragraphs with detailed guidance...
     {
       id: [n],
       title: "Conclusion",
       type: "conclusion",
       learningMaterial: \`## Writing Your Conclusion
 
-[Specific guidance connecting to mark scheme requirements for conclusions]
+[Specific guidance]
 \`,
       writingPrompt: "[Instruction]",
       keyPoints: ["[Criterion]"],
-      assessmentFocus: ["[Relevant AO/criteria]"],
       exampleQuotes: [],
       points: [marks]
     }
   ],
-  
-  // CRITICAL: This must match the ACTUAL mark scheme structure
-  // Use the exact categories, marks, and descriptors from the provided mark scheme
-  // Include ALL levels, not just the top band
   gradingCriteria: {
-    // Structure this to match the actual mark scheme categories
-    // Examples shown above - adapt to match whatever the mark scheme actually uses
+    content: { weight: 30, description: "[From mark scheme]" },
+    analysis: { weight: 30, description: "[From mark scheme]" },
+    structure: { weight: 20, description: "[From mark scheme]" },
+    expression: { weight: 20, description: "[From mark scheme]" }
   }
 };
 \`\`\`
 
-## FINAL CHECKLIST BEFORE OUTPUT
-1. Does gradingCriteria use the EXACT categories from the mark scheme (not generic ones)?
-2. Are ALL level descriptors included for each criterion (not just top band)?
-3. Do the mark allocations match the actual mark scheme?
-4. Is the fullMarkScheme field populated with the complete mark scheme text?
-5. Does each paragraph's assessmentFocus link to actual mark scheme criteria?
-6. Are the total marks correct?
-
-Generate the complete configuration:`;
+Generate the complete configuration using ONLY plain ASCII characters:`;
 
     content.push({ type: 'text', text: prompt });
     return [{ role: 'user', content }];
@@ -332,7 +247,7 @@ Generate the complete configuration:`;
 function extractJavaScript(text) {
     const match = text.match(/```(?:javascript|js)?\s*([\s\S]*?)```/);
     if (match) return match[1].trim();
-    const configMatch = text.match(/(window\.ESSAYS[\s\S]*};?)/);
+    const configMatch = text.match(/(window\.ESSAY_CONFIG[\s\S]*};?)/);
     if (configMatch) return configMatch[1].trim();
     return text.trim();
 }

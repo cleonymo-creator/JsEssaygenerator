@@ -765,7 +765,7 @@
         <div class="section" data-section="3">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">✓</span>
+                    <span class="card-icon">✔</span>
                     Mark Scheme
                 </h2>
 
@@ -857,7 +857,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📝</span>
+                    <span class="card-icon">🔍</span>
                     Review Your Input
                 </h2>
                 <div id="reviewSummary" style="line-height: 1.8;"></div>
@@ -1250,13 +1250,15 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 console.log('Job started:', jobId);
                 updateLoadingText('Processing with Claude Sonnet...');
 
-                // Trigger the processor from the client (fire and forget)
-                console.log('Triggering processor...');
-                fetch('/.netlify/functions/process-job', {
+                // Trigger the background processor (will return 202 immediately)
+                console.log('Triggering background processor...');
+                fetch('/.netlify/functions/process-job-background', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ jobId })
-                }).catch(err => console.log('Processor trigger sent'));
+                }).then(res => {
+                    console.log('Background function response:', res.status);
+                }).catch(err => console.log('Background trigger sent (expected):', err.message));
 
                 // Poll for result
                 const result = await pollForResult(jobId);
@@ -1287,7 +1289,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             if (el) el.textContent = text;
         }
 
-        async function pollForResult(jobId, maxAttempts = 90, interval = 5000) {
+        async function pollForResult(jobId, maxAttempts = 120, interval = 3000) {
             for (let i = 0; i < maxAttempts; i++) {
                 await sleep(interval);
                 console.log(`Polling ${i + 1}/${maxAttempts}...`);
