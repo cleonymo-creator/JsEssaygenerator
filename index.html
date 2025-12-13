@@ -1210,7 +1210,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             if (el) el.textContent = text;
         }
 
-        async function pollForResult(jobId, maxAttempts = 90, interval = 2000) {
+        async function pollForResult(jobId, maxAttempts = 90, interval = 5000) {
             for (let i = 0; i < maxAttempts; i++) {
                 await sleep(interval);
                 console.log(`Polling ${i + 1}/${maxAttempts}...`);
