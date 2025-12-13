@@ -116,8 +116,7 @@ function buildMessages(data) {
     const {
         subject, yearGroup, examBoard, totalMarks, timeAllowed, paperName,
         examQuestion, sourceMaterial, sourceFiles, markScheme, markSchemeFile,
-        additionalNotes, minWords, targetWords, maxAttempts, teacherPassword,
-        gradeBoundaries, includeGradeDescriptors
+        additionalNotes, minWords, targetWords, maxAttempts, teacherPassword
     } = data;
 
     const content = [];
@@ -141,56 +140,7 @@ function buildMessages(data) {
         content.push({ type: 'text', text: `[Mark scheme: ${markSchemeFile.name}]` });
     }
 
-    const hasGradeBoundaries = gradeBoundaries && gradeBoundaries.length > 0;
-
-    // Build grade boundaries section for prompt
-    let gradeBoundariesSection = '';
-    if (hasGradeBoundaries) {
-        gradeBoundariesSection = `\n## GRADE BOUNDARIES (PROVIDED BY TEACHER)\n`;
-        gradeBoundariesSection += `The following grade boundaries have been provided:\n`;
-        gradeBoundaries.forEach(b => {
-            gradeBoundariesSection += `- Grade ${b.grade}: ${b.minMarks || '?'}-${b.maxMarks || '?'} marks\n`;
-        });
-        
-        gradeBoundariesSection += `\n**IMPORTANT INSTRUCTIONS FOR GRADE BOUNDARIES:**\n`;
-        gradeBoundariesSection += `1. You MUST interpolate any missing grades between the provided boundaries\n`;
-        gradeBoundariesSection += `2. For example, if given Grade 9 (36-40), Grade 6 (24-28), and Grade 4 (16-20), you should also generate Grade 8, Grade 7, and Grade 5\n`;
-        gradeBoundariesSection += `3. Calculate interpolated mark boundaries proportionally based on the gaps\n`;
-        gradeBoundariesSection += `4. Generate descriptors for ALL grades (provided and interpolated)\n`;
-        gradeBoundariesSection += `5. Each descriptor should be 2-3 sentences explaining what a response at that level demonstrates, directly referencing the mark scheme criteria\n`;
-        gradeBoundariesSection += `6. Order grades from highest to lowest in the output\n`;
-    }
-
-    // Build the grading section of the config template
-    let gradingSection = '';
-    if (hasGradeBoundaries) {
-        // When grade boundaries are provided, use them instead of generic gradingCriteria
-        gradingSection = `
-  // Grade boundaries with descriptors based on mark scheme
-  gradeBoundaries: [
-    // INTERPOLATE all grades between the provided boundaries
-    // Include ALL grades from highest to lowest
-    // Example format for each grade:
-    {
-      grade: "[grade name]",
-      minMarks: [minimum marks for this grade],
-      maxMarks: [maximum marks for this grade],
-      descriptor: "[2-3 sentences describing what a response at this grade demonstrates, referencing specific mark scheme criteria]"
-    }
-    // ... repeat for all grades (provided AND interpolated)
-  ]`;
-    } else {
-        // No grade boundaries - use the generic gradingCriteria
-        gradingSection = `
-  gradingCriteria: {
-    content: { weight: 30, description: "[From mark scheme]" },
-    analysis: { weight: 30, description: "[From mark scheme]" },
-    structure: { weight: 20, description: "[From mark scheme]" },
-    expression: { weight: 20, description: "[From mark scheme]" }
-  }`;
-    }
-
-    const prompt = `You are an expert educational content designer. Create a guided essay writing configuration.
+    const prompt = `You are an expert educational content designer. Create a guided essay writing configuration compatible with a holistic grading system.
 
 ## EXAM INFORMATION
 - Subject: ${subject || 'Not specified'}
@@ -207,7 +157,7 @@ ${sourceMaterial ? `## SOURCE MATERIAL\n${sourceMaterial}\n` : ''}
 
 ## MARK SCHEME
 ${markScheme || 'No mark scheme provided - create appropriate criteria for this subject.'}
-${gradeBoundariesSection}
+
 ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 
 ## CONFIGURATION SETTINGS
@@ -217,12 +167,15 @@ ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 - Teacher password: ${teacherPassword || 'teacher123'}
 
 ## IMPORTANT FORMATTING RULES
-- Use ONLY plain ASCII characters - no special symbols, checkmarks, emojis, or accented characters
+- Use ONLY plain ASCII characters - no special symbols, checkmarks, or accented characters
 - Use simple dashes (-) or asterisks (*) for bullet points
 - Avoid curly quotes - use straight quotes only
-- The essay ID should be lowercase with hyphens (e.g., 'creative-writing-sunset')
-${hasGradeBoundaries ? `- CRITICAL: You MUST interpolate missing grades and include ALL grades from highest to lowest
-- Each grade descriptor must specifically reference the mark scheme criteria provided above` : ''}
+- The essay ID should be lowercase with hyphens (e.g., 'macbeth-ambition-essay')
+- For icon field, use a simple emoji that represents the subject/topic
+
+## HOLISTIC GRADING SYSTEM
+This system uses holistic assessment - DO NOT include "points" fields in paragraphs.
+Instead, provide rich grade descriptors in officialMarkScheme if this is an exam-based task.
 
 ## TASK
 Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid JavaScript using this EXACT format:
@@ -230,62 +183,249 @@ Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid J
 \`\`\`javascript
 window.ESSAYS = window.ESSAYS || {};
 window.ESSAYS['[essay-id-here]'] = {
+  // === REQUIRED CORE FIELDS ===
   id: '[essay-id-here]',
-  title: "[Title for this essay task]",
+  title: "[Short title for this essay task]",
   subject: "${subject || 'Subject'}",
   yearGroup: "${yearGroup || 'Year'}",
-  totalMarks: ${totalMarks || 40},
-  essayTitle: "[The exam question]",
-  instructions: "[Clear instructions for students]",
+  description: "[Brief one-line description shown on selection screen]",
+  icon: "📝", // Choose appropriate emoji for the topic
+  
+  // === ESSAY QUESTION & INSTRUCTIONS ===
+  essayTitle: "[The main essay question students will answer]",
+  instructions: "[Clear instructions shown to students at the start]",
+  
+  // === ORIGINAL TASK (shown in right panel) ===
   originalTask: \`## Exam Question
-[Full question]
 
-## Mark Scheme Summary
-[Key criteria]\`,
+[Full exam question as students would see it]
+
+${examBoard ? '**Exam Board**: ' + examBoard : ''}
+${totalMarks ? '**Total Marks**: ' + totalMarks : ''}
+${timeAllowed ? '**Time Allowed**: ' + timeAllowed + ' minutes' : ''}
+
+### Assessment Objectives:
+- [Assessment objective 1 from mark scheme]
+- [Assessment objective 2 from mark scheme]
+
+### What to include:
+- [Key requirement 1]
+- [Key requirement 2]
+- [Key requirement 3]\`,
+  
+  // === GLOBAL SOURCE MATERIAL (optional but recommended) ===
+  // Include this if there's context/background that applies to the whole essay
+  ${sourceMaterial ? `sourceMaterial: \`## Background Information
+
+[Relevant context that students should consider throughout their essay]
+
+### Key Facts:
+- [Important contextual point 1]
+- [Important contextual point 2]
+
+### Relevant Information:
+[Any quotes, data, or background material that applies to the whole essay]\`,` : '// sourceMaterial: `## Background\\n[Add global context if needed]`,'}
+  
+  // === WRITING CONSTRAINTS ===
   maxAttempts: ${maxAttempts || 3},
   minWordsPerParagraph: ${minWords || 80},
   targetWordsPerParagraph: ${targetWords || 150},
   teacherPassword: "${teacherPassword || 'teacher123'}",
+  
+  // === PARAGRAPHS ARRAY ===
   paragraphs: [
     {
-      id: 1,
+      id: "intro",
       title: "Introduction",
       type: "introduction",
+      
       learningMaterial: \`## Writing Your Introduction
 
-[Detailed, specific guidance for this essay...]
+[Detailed, specific guidance for writing an introduction for THIS essay]
 
-### Key Points to Cover
-- [Specific point 1]
+### Key Points to Cover:
+- [Specific point 1 relevant to this essay question]
 - [Specific point 2]
+- [Specific point 3]
 
-### Sentence Starters
-- "[Relevant starter]..."
-\`,
-      writingPrompt: "[Clear instruction]",
-      keyPoints: ["[Mark scheme criterion]"],
-      exampleQuotes: [],
-      points: [marks]
+### Structure Tips:
+- [Structural advice 1]
+- [Structural advice 2]
+
+### Sentence Starters:
+- "[Relevant starter for this topic]..."
+- "[Another option]..."\`,
+      
+      writingPrompt: "[Clear instruction about what to write in the introduction]",
+      
+      keyPoints: [
+        "[Key point 1 to address in introduction]",
+        "[Key point 2]",
+        "[Key point 3]"
+      ],
+      
+      exampleQuotes: [] // Usually empty for introductions
+      
+      // Optional: Add paragraph-specific sourceMaterial only if needed
+      // sourceMaterial: \`## Introduction Resources\\n[Specific material for intro]\`
     },
-    // More body paragraphs with detailed guidance...
+    
+    // Body paragraph 1
     {
-      id: [n],
+      id: "para1",
+      title: "[Title for first body paragraph]",
+      type: "body",
+      
+      learningMaterial: \`## [Paragraph topic]
+
+[Detailed teaching content for this paragraph]
+
+### Key Analysis Points:
+- [Analysis point 1]
+- [Analysis point 2]
+
+### Evidence to Use:
+- [What evidence/quotes to include]
+
+### Techniques to Discuss:
+- [Technique 1 and its effect]
+- [Technique 2 and its effect]\`,
+      
+      writingPrompt: "[Instruction for what to write in this paragraph]",
+      
+      keyPoints: [
+        "[Key point 1 for this paragraph]",
+        "[Key point 2]",
+        "[Key point 3]"
+      ],
+      
+      exampleQuotes: [
+        "[Relevant quote 1]",
+        "[Relevant quote 2]"
+      ],
+      
+      // If this paragraph needs specific source material (extract, data, etc.):
+      sourceMaterial: \`## [Title for source material]
+
+[Specific extract, passage, data, or context for THIS paragraph]
+
+### Analysis Guidance:
+- [What to look for in this material]
+- [Key points to analyze]
+
+### Key Vocabulary:
+- [Term 1]: [definition]
+- [Term 2]: [definition]\`
+    },
+    
+    // Additional body paragraphs (2-4 total body paragraphs)...
+    
+    {
+      id: "conclusion",
       title: "Conclusion",
       type: "conclusion",
+      
       learningMaterial: \`## Writing Your Conclusion
 
-[Specific guidance]
-\`,
-      writingPrompt: "[Instruction]",
-      keyPoints: ["[Criterion]"],
-      exampleQuotes: [],
-      points: [marks]
+[Guidance for writing a strong conclusion]
+
+### What to Include:
+- [Summary requirement]
+- [Final evaluation requirement]
+- [Link back to question]
+
+### Avoid:
+- Introducing new points
+- Simply repeating introduction
+- Ending abruptly\`,
+      
+      writingPrompt: "[Instruction for conclusion]",
+      
+      keyPoints: [
+        "[Summary point]",
+        "[Final evaluation]",
+        "[Link to question/context]"
+      ],
+      
+      exampleQuotes: [] // Usually empty for conclusions
     }
-  ],${gradingSection}
+  ],
+  
+  // === GRADING CRITERIA (must sum to 100) ===
+  gradingCriteria: {
+    content: { 
+      weight: 30, 
+      description: "[What counts as good content - based on mark scheme]" 
+    },
+    analysis: { 
+      weight: 30, 
+      description: "[What counts as good analysis - based on mark scheme]" 
+    },
+    structure: { 
+      weight: 20, 
+      description: "[What counts as good structure - based on mark scheme]" 
+    },
+    expression: { 
+      weight: 20, 
+      description: "[What counts as good expression - based on mark scheme]" 
+    }
+  }${totalMarks && totalMarks >= 20 ? `,
+  
+  // === OFFICIAL MARK SCHEME (include if exam-based question) ===
+  officialMarkScheme: {
+    totalMarks: ${totalMarks || 30},
+    gradeBoundaries: [
+      {
+        grade: "9",
+        minMarks: [calculate: ~85-90% of total],
+        maxMarks: ${totalMarks || 30},
+        descriptor: "[Detailed grade 9 descriptor from the mark scheme - what excellence looks like]"
+      },
+      {
+        grade: "8",
+        minMarks: [calculate: ~75-84% of total],
+        maxMarks: [one less than grade 9 min],
+        descriptor: "[Detailed grade 8 descriptor from mark scheme]"
+      },
+      {
+        grade: "7",
+        minMarks: [calculate: ~65-74% of total],
+        maxMarks: [one less than grade 8 min],
+        descriptor: "[Detailed grade 7 descriptor from mark scheme]"
+      },
+      {
+        grade: "6",
+        minMarks: [calculate: ~55-64% of total],
+        maxMarks: [one less than grade 7 min],
+        descriptor: "[Detailed grade 6 descriptor from mark scheme]"
+      },
+      {
+        grade: "5",
+        minMarks: [calculate: ~45-54% of total],
+        maxMarks: [one less than grade 6 min],
+        descriptor: "[Detailed grade 5 descriptor from mark scheme]"
+      },
+      {
+        grade: "4",
+        minMarks: [calculate: ~35-44% of total],
+        maxMarks: [one less than grade 5 min],
+        descriptor: "[Detailed grade 4 descriptor from mark scheme]"
+      }
+    ]
+  }` : ''}
 };
 \`\`\`
 
-Generate the complete configuration using ONLY plain ASCII characters:`;
+## CRITICAL REQUIREMENTS:
+1. DO NOT include "points: X" in any paragraph objects
+2. DO include detailed sourceMaterial at paragraph level if students need specific extracts/passages
+3. DO include originalTask with clear markdown formatting
+4. DO make learningMaterial specific and detailed for each paragraph
+5. DO include officialMarkScheme with holistic grade descriptors if this is exam-based
+6. Ensure all text uses plain ASCII characters only
+7. Make the essay configuration rich, detailed, and educationally valuable
+
+Generate the complete configuration now:`;
 
     content.push({ type: 'text', text: prompt });
     return [{ role: 'user', content }];
