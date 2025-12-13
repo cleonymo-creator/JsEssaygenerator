@@ -116,7 +116,8 @@ function buildMessages(data) {
     const {
         subject, yearGroup, examBoard, totalMarks, timeAllowed, paperName,
         examQuestion, sourceMaterial, sourceFiles, markScheme, markSchemeFile,
-        additionalNotes, minWords, targetWords, maxAttempts, teacherPassword
+        additionalNotes, minWords, targetWords, maxAttempts, teacherPassword,
+        gradeBoundaries, includeGradeDescriptors
     } = data;
 
     const content = [];
@@ -140,6 +141,32 @@ function buildMessages(data) {
         content.push({ type: 'text', text: `[Mark scheme: ${markSchemeFile.name}]` });
     }
 
+    // Build grade boundaries section for prompt
+    let gradeBoundariesSection = '';
+    if (gradeBoundaries && gradeBoundaries.length > 0) {
+        gradeBoundariesSection = `\n## GRADE BOUNDARIES\n`;
+        gradeBoundaries.forEach(b => {
+            gradeBoundariesSection += `- Grade ${b.grade}: ${b.minMarks || '?'}-${b.maxMarks || '?'} marks\n`;
+        });
+        if (includeGradeDescriptors) {
+            gradeBoundariesSection += `\nPLEASE GENERATE DETAILED DESCRIPTORS for each grade boundary based on the mark scheme criteria. These should describe what a student at each grade level would typically demonstrate.\n`;
+        }
+    }
+
+    // Build grade boundaries config template
+    let gradeBoundariesTemplate = '';
+    if (gradeBoundaries && gradeBoundaries.length > 0) {
+        gradeBoundariesTemplate = `
+  gradeBoundaries: [
+${gradeBoundaries.map(b => `    {
+      grade: "${b.grade}",
+      minMarks: ${b.minMarks || 0},
+      maxMarks: ${b.maxMarks || totalMarks || 40}${includeGradeDescriptors ? `,
+      descriptor: "[Detailed description of what a Grade ${b.grade} response demonstrates - reference specific mark scheme criteria]"` : ''}
+    }`).join(',\n')}
+  ],`;
+    }
+
     const prompt = `You are an expert educational content designer. Create a guided essay writing configuration.
 
 ## EXAM INFORMATION
@@ -157,7 +184,7 @@ ${sourceMaterial ? `## SOURCE MATERIAL\n${sourceMaterial}\n` : ''}
 
 ## MARK SCHEME
 ${markScheme || 'No mark scheme provided - create appropriate criteria for this subject.'}
-
+${gradeBoundariesSection}
 ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 
 ## CONFIGURATION SETTINGS
@@ -171,6 +198,7 @@ ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 - Use simple dashes (-) or asterisks (*) for bullet points
 - Avoid curly quotes - use straight quotes only
 - The essay ID should be lowercase with hyphens (e.g., 'creative-writing-sunset')
+${gradeBoundaries?.length > 0 && includeGradeDescriptors ? `- For grade descriptors: Write 2-3 sentences describing what a response at this grade level demonstrates, directly referencing the mark scheme criteria` : ''}
 
 ## TASK
 Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid JavaScript using this EXACT format:
@@ -182,6 +210,7 @@ window.ESSAYS['[essay-id-here]'] = {
   title: "[Title for this essay task]",
   subject: "${subject || 'Subject'}",
   yearGroup: "${yearGroup || 'Year'}",
+  totalMarks: ${totalMarks || 40},
   essayTitle: "[The exam question]",
   instructions: "[Clear instructions for students]",
   originalTask: \`## Exam Question
@@ -192,7 +221,7 @@ window.ESSAYS['[essay-id-here]'] = {
   maxAttempts: ${maxAttempts || 3},
   minWordsPerParagraph: ${minWords || 80},
   targetWordsPerParagraph: ${targetWords || 150},
-  teacherPassword: "${teacherPassword || 'teacher123'}",
+  teacherPassword: "${teacherPassword || 'teacher123'}",${gradeBoundariesTemplate}
   paragraphs: [
     {
       id: 1,
