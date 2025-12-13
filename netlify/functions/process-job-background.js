@@ -141,30 +141,53 @@ function buildMessages(data) {
         content.push({ type: 'text', text: `[Mark scheme: ${markSchemeFile.name}]` });
     }
 
+    const hasGradeBoundaries = gradeBoundaries && gradeBoundaries.length > 0;
+
     // Build grade boundaries section for prompt
     let gradeBoundariesSection = '';
-    if (gradeBoundaries && gradeBoundaries.length > 0) {
-        gradeBoundariesSection = `\n## GRADE BOUNDARIES\n`;
+    if (hasGradeBoundaries) {
+        gradeBoundariesSection = `\n## GRADE BOUNDARIES (PROVIDED BY TEACHER)\n`;
+        gradeBoundariesSection += `The following grade boundaries have been provided:\n`;
         gradeBoundaries.forEach(b => {
             gradeBoundariesSection += `- Grade ${b.grade}: ${b.minMarks || '?'}-${b.maxMarks || '?'} marks\n`;
         });
-        if (includeGradeDescriptors) {
-            gradeBoundariesSection += `\nPLEASE GENERATE DETAILED DESCRIPTORS for each grade boundary based on the mark scheme criteria. These should describe what a student at each grade level would typically demonstrate.\n`;
-        }
+        
+        gradeBoundariesSection += `\n**IMPORTANT INSTRUCTIONS FOR GRADE BOUNDARIES:**\n`;
+        gradeBoundariesSection += `1. You MUST interpolate any missing grades between the provided boundaries\n`;
+        gradeBoundariesSection += `2. For example, if given Grade 9 (36-40), Grade 6 (24-28), and Grade 4 (16-20), you should also generate Grade 8, Grade 7, and Grade 5\n`;
+        gradeBoundariesSection += `3. Calculate interpolated mark boundaries proportionally based on the gaps\n`;
+        gradeBoundariesSection += `4. Generate descriptors for ALL grades (provided and interpolated)\n`;
+        gradeBoundariesSection += `5. Each descriptor should be 2-3 sentences explaining what a response at that level demonstrates, directly referencing the mark scheme criteria\n`;
+        gradeBoundariesSection += `6. Order grades from highest to lowest in the output\n`;
     }
 
-    // Build grade boundaries config template
-    let gradeBoundariesTemplate = '';
-    if (gradeBoundaries && gradeBoundaries.length > 0) {
-        gradeBoundariesTemplate = `
+    // Build the grading section of the config template
+    let gradingSection = '';
+    if (hasGradeBoundaries) {
+        // When grade boundaries are provided, use them instead of generic gradingCriteria
+        gradingSection = `
+  // Grade boundaries with descriptors based on mark scheme
   gradeBoundaries: [
-${gradeBoundaries.map(b => `    {
-      grade: "${b.grade}",
-      minMarks: ${b.minMarks || 0},
-      maxMarks: ${b.maxMarks || totalMarks || 40}${includeGradeDescriptors ? `,
-      descriptor: "[Detailed description of what a Grade ${b.grade} response demonstrates - reference specific mark scheme criteria]"` : ''}
-    }`).join(',\n')}
-  ],`;
+    // INTERPOLATE all grades between the provided boundaries
+    // Include ALL grades from highest to lowest
+    // Example format for each grade:
+    {
+      grade: "[grade name]",
+      minMarks: [minimum marks for this grade],
+      maxMarks: [maximum marks for this grade],
+      descriptor: "[2-3 sentences describing what a response at this grade demonstrates, referencing specific mark scheme criteria]"
+    }
+    // ... repeat for all grades (provided AND interpolated)
+  ]`;
+    } else {
+        // No grade boundaries - use the generic gradingCriteria
+        gradingSection = `
+  gradingCriteria: {
+    content: { weight: 30, description: "[From mark scheme]" },
+    analysis: { weight: 30, description: "[From mark scheme]" },
+    structure: { weight: 20, description: "[From mark scheme]" },
+    expression: { weight: 20, description: "[From mark scheme]" }
+  }`;
     }
 
     const prompt = `You are an expert educational content designer. Create a guided essay writing configuration.
@@ -198,7 +221,8 @@ ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 - Use simple dashes (-) or asterisks (*) for bullet points
 - Avoid curly quotes - use straight quotes only
 - The essay ID should be lowercase with hyphens (e.g., 'creative-writing-sunset')
-${gradeBoundaries?.length > 0 && includeGradeDescriptors ? `- For grade descriptors: Write 2-3 sentences describing what a response at this grade level demonstrates, directly referencing the mark scheme criteria` : ''}
+${hasGradeBoundaries ? `- CRITICAL: You MUST interpolate missing grades and include ALL grades from highest to lowest
+- Each grade descriptor must specifically reference the mark scheme criteria provided above` : ''}
 
 ## TASK
 Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid JavaScript using this EXACT format:
@@ -221,7 +245,7 @@ window.ESSAYS['[essay-id-here]'] = {
   maxAttempts: ${maxAttempts || 3},
   minWordsPerParagraph: ${minWords || 80},
   targetWordsPerParagraph: ${targetWords || 150},
-  teacherPassword: "${teacherPassword || 'teacher123'}",${gradeBoundariesTemplate}
+  teacherPassword: "${teacherPassword || 'teacher123'}",
   paragraphs: [
     {
       id: 1,
@@ -257,13 +281,7 @@ window.ESSAYS['[essay-id-here]'] = {
       exampleQuotes: [],
       points: [marks]
     }
-  ],
-  gradingCriteria: {
-    content: { weight: 30, description: "[From mark scheme]" },
-    analysis: { weight: 30, description: "[From mark scheme]" },
-    structure: { weight: 20, description: "[From mark scheme]" },
-    expression: { weight: 20, description: "[From mark scheme]" }
-  }
+  ],${gradingSection}
 };
 \`\`\`
 

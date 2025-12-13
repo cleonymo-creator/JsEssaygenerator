@@ -887,8 +887,17 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                     Grade Boundaries (Optional)
                 </h2>
                 <p style="margin-bottom: 1rem; opacity: 0.8; font-size: 0.95rem;">
-                    If you provide grade boundaries, the generator will create descriptors for each grade based on the mark scheme criteria.
+                    Provide grade boundaries to generate descriptors based on the mark scheme. For best results, include at least <strong>3 boundaries</strong> (e.g., low, mid, and high grades). Missing boundaries will be interpolated automatically.
                 </p>
+
+                <div class="boundary-hints" style="background: var(--sage-soft); padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.9rem;">
+                    <strong>💡 Suggested minimum:</strong> Enter boundaries for your lowest passing grade, a middle grade, and the top grade. For example:
+                    <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
+                        <li>GCSE: Grade 4, Grade 6, Grade 9</li>
+                        <li>A-Level: Grade E, Grade C, Grade A*</li>
+                        <li>IB: Level 3, Level 5, Level 7</li>
+                    </ul>
+                </div>
 
                 <div class="grade-boundaries-container" id="gradeBoundariesContainer">
                     <div class="grade-boundary-row">
@@ -918,7 +927,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                         <input type="checkbox" id="includeGradeDescriptors" checked>
                         Generate detailed descriptors for each grade
                     </label>
-                    <span class="label-hint">When enabled, Claude will create specific criteria descriptions for what constitutes each grade level</span>
+                    <span class="label-hint">Claude will create specific criteria descriptions for what constitutes each grade level, and interpolate any missing grades</span>
                 </div>
             </div>
 
