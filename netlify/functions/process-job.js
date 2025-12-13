@@ -166,11 +166,19 @@ ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 - Max attempts: ${maxAttempts || 3}
 - Teacher password: ${teacherPassword || 'teacher123'}
 
+## IMPORTANT FORMATTING RULES
+- Use ONLY plain ASCII characters - no special symbols, checkmarks, emojis, or accented characters
+- Use simple dashes (-) or asterisks (*) for bullet points
+- Avoid curly quotes - use straight quotes only
+- The essay ID should be lowercase with hyphens (e.g., 'creative-writing-sunset')
+
 ## TASK
-Generate a complete essay.js configuration with 4-6 paragraphs. Output ONLY valid JavaScript:
+Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid JavaScript using this EXACT format:
 
 \`\`\`javascript
-window.ESSAY_CONFIG = {
+window.ESSAYS = window.ESSAYS || {};
+window.ESSAYS['[essay-id-here]'] = {
+  id: '[essay-id-here]',
   title: "[Title for this essay task]",
   subject: "${subject || 'Subject'}",
   yearGroup: "${yearGroup || 'Year'}",
@@ -222,14 +230,15 @@ window.ESSAY_CONFIG = {
     }
   ],
   gradingCriteria: {
-    content: { weight: 40, description: "[From mark scheme]" },
-    analysis: { weight: 40, description: "[From mark scheme]" },
-    technical: { weight: 20, description: "[From mark scheme]" }
+    content: { weight: 30, description: "[From mark scheme]" },
+    analysis: { weight: 30, description: "[From mark scheme]" },
+    structure: { weight: 20, description: "[From mark scheme]" },
+    expression: { weight: 20, description: "[From mark scheme]" }
   }
 };
 \`\`\`
 
-Generate the complete configuration:`;
+Generate the complete configuration using ONLY plain ASCII characters:`;
 
     content.push({ type: 'text', text: prompt });
     return [{ role: 'user', content }];
