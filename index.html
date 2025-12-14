@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Essay Config Generator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -773,7 +774,7 @@
 <body>
     <header>
         <div class="header-content">
-            <h1>ðŸ“ Essay Config Generator</h1>
+            <h1>📝 Essay Config Generator</h1>
             <p class="subtitle">Transform exam questions into guided writing configurations</p>
         </div>
     </header>
@@ -803,7 +804,7 @@
         <div class="section active" data-section="1">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">ðŸ“‹</span>
+                    <span class="card-icon">📋</span>
                     Exam Information
                 </h2>
 
@@ -854,7 +855,7 @@
         <div class="section" data-section="2">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">â“</span>
+                    <span class="card-icon">❓</span>
                     Exam Question
                 </h2>
 
@@ -874,7 +875,7 @@
                     <label>Upload Source Documents</label>
                     <span class="label-hint">Optionally upload PDF or image files containing source material</span>
                     <div class="file-upload" id="sourceUpload">
-                        <div class="file-upload-icon">ðŸ“„</div>
+                        <div class="file-upload-icon">📄</div>
                         <div class="file-upload-text">Drop files here or click to browse</div>
                         <div class="file-upload-hint">PDF, PNG, JPG supported (max 10MB)</div>
                         <input type="file" id="sourceFiles" multiple accept=".pdf,.png,.jpg,.jpeg">
@@ -899,7 +900,7 @@
         <div class="section" data-section="3">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">âœ”</span>
+                    <span class="card-icon">✔</span>
                     Mark Scheme
                 </h2>
 
@@ -930,7 +931,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 <div class="tab-content" data-tab-content="upload">
                     <div class="form-group">
                         <div class="file-upload" id="markSchemeUpload">
-                            <div class="file-upload-icon">ðŸ“‹</div>
+                            <div class="file-upload-icon">📋</div>
                             <div class="file-upload-text">Drop mark scheme PDF here or click to browse</div>
                             <div class="file-upload-hint">PDF files supported (max 10MB)</div>
                             <input type="file" id="markSchemeFile" accept=".pdf">
@@ -948,7 +949,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">ðŸ“Š</span>
+                    <span class="card-icon">📊</span>
                     Grade Boundaries (Optional)
                 </h2>
                 <p style="margin-bottom: 1rem; opacity: 0.8; font-size: 0.95rem;">
@@ -966,7 +967,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 <div id="autoFetchResult"></div>
 
                 <div class="boundary-hints" style="background: var(--sage-soft); padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.9rem;">
-                    <strong>ðŸ’¡ Suggested minimum:</strong> Enter boundaries for your lowest passing grade, a middle grade, and the top grade. For example:
+                    <strong>💡 Suggested minimum:</strong> Enter boundaries for your lowest passing grade, a middle grade, and the top grade. For example:
                     <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
                         <li>GCSE: Grade 4, Grade 6, Grade 9</li>
                         <li>A-Level: Grade E, Grade C, Grade A*</li>
@@ -1022,7 +1023,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         <div class="section" data-section="4">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">âš™ï¸</span>
+                    <span class="card-icon">⚙️</span>
                     Configuration Options
                 </h2>
 
@@ -1051,7 +1052,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">ðŸ“</span>
+                    <span class="card-icon">📝</span>
                     Review Your Input
                 </h2>
                 <div id="reviewSummary" style="line-height: 1.8;"></div>
@@ -1078,7 +1079,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">ðŸ“„</span>
+                    <span class="card-icon">📄</span>
                     Generated Configuration
                 </h2>
                 <pre class="output-preview" id="outputPreview"></pre>
@@ -1107,7 +1108,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
     </div>
 
     <footer>
-        Essay Config Generator â€¢ Powered by Claude AI
+        Essay Config Generator • Powered by Claude AI
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1269,7 +1270,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 indicator.className = 'uploaded-file';
                 indicator.style.opacity = '0.7';
             }
-            indicator.innerHTML = `<span class="uploaded-file-icon">â³</span><span class="uploaded-file-name">${text}</span>`;
+            indicator.innerHTML = `<span class="uploaded-file-icon">⏳</span><span class="uploaded-file-name">${text}</span>`;
             container.appendChild(indicator);
         }
 
@@ -1294,7 +1295,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             const container = document.getElementById('sourceFilesList');
             container.innerHTML = uploadedSourceFiles.map((file, index) => `
                 <div class="uploaded-file">
-                    <span class="uploaded-file-icon">${file.extractedText ? 'ðŸ“' : 'ðŸ“„'}</span>
+                    <span class="uploaded-file-icon">${file.extractedText ? '📝' : '📄'}</span>
                     <span class="uploaded-file-name">${file.name}${file.extractedText ? ' (text extracted)' : ''}</span>
                     <button class="uploaded-file-remove" onclick="removeSourceFile(${index})">&times;</button>
                 </div>
@@ -1311,7 +1312,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             if (uploadedMarkSchemeFile) {
                 container.innerHTML = `
                     <div class="uploaded-file">
-                        <span class="uploaded-file-icon">${uploadedMarkSchemeFile.extractedText ? 'ðŸ“' : 'ðŸ“‹'}</span>
+                        <span class="uploaded-file-icon">${uploadedMarkSchemeFile.extractedText ? '📝' : '📋'}</span>
                         <span class="uploaded-file-name">${uploadedMarkSchemeFile.name}${uploadedMarkSchemeFile.extractedText ? ' (text extracted)' : ''}</span>
                         <button class="uploaded-file-remove" onclick="removeMarkSchemeFile()">&times;</button>
                     </div>
