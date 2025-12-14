@@ -1415,23 +1415,51 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             resultsContainer.innerHTML = `
                 <div class="search-loading">
                     <div class="loading-spinner"></div>
-                    <span>Searching for past papers... This may take a moment.</span>
+                    <span>Starting search...</span>
                 </div>
             `;
 
             try {
-                const response = await fetch('/.netlify/functions/search-past-papers', {
+                // Start the search job
+                const startResponse = await fetch('/.netlify/functions/start-search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ examBoard, subject, paper, questionNumber })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Search failed: ${response.status}`);
+                if (!startResponse.ok) {
+                    throw new Error(`Failed to start search: ${startResponse.status}`);
                 }
 
-                const data = await response.json();
-                displaySearchResults(data);
+                const { jobId } = await startResponse.json();
+                console.log('Search job started:', jobId);
+
+                resultsContainer.innerHTML = `
+                    <div class="search-loading">
+                        <div class="loading-spinner"></div>
+                        <span>Searching past papers... This may take up to 30 seconds.</span>
+                    </div>
+                `;
+
+                // Trigger the background processor
+                fetch('/.netlify/functions/process-search-background', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId })
+                }).catch(err => console.log('Background trigger sent'));
+
+                // Poll for result
+                const result = await pollForSearchResult(jobId);
+                
+                if (result.status === 'error') {
+                    throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error));
+                }
+
+                if (result.result) {
+                    displaySearchResults(result.result);
+                } else {
+                    throw new Error('No results returned');
+                }
 
             } catch (error) {
                 console.error('Search error:', error);
@@ -1444,6 +1472,35 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             } finally {
                 btn.disabled = false;
             }
+        }
+
+        async function pollForSearchResult(jobId, maxAttempts = 40, interval = 2000) {
+            for (let i = 0; i < maxAttempts; i++) {
+                await sleep(interval);
+                console.log(`Polling search ${i + 1}/${maxAttempts}...`);
+                
+                try {
+                    const response = await fetch(`/.netlify/functions/check-job?jobId=${encodeURIComponent(jobId)}`);
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Search status:', result.status);
+                        
+                        if (result.status === 'completed' || result.status === 'error') {
+                            return result;
+                        }
+                    }
+                    
+                    // Update loading message
+                    const loadingSpan = document.querySelector('.search-loading span');
+                    if (loadingSpan) {
+                        const elapsed = Math.round((i + 1) * interval / 1000);
+                        loadingSpan.textContent = `Searching past papers... (${elapsed}s)`;
+                    }
+                } catch (e) {
+                    console.error('Poll error:', e);
+                }
+            }
+            throw new Error('Search timed out. Please try again.');
         }
 
         function displaySearchResults(data) {

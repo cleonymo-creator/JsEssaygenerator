@@ -1,62 +1,69 @@
-// Search past papers function - uses web search to find exam questions
+// Process search background function - calls Claude with web search and saves result
+// Named with -background suffix to enable 15 minute timeout
 const https = require('https');
+const { getStore, connectLambda } = require('@netlify/blobs');
 
 exports.handler = async (event, context) => {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-    }
+    // Connect Lambda to enable automatic Blobs configuration
+    connectLambda(event);
+    
+    // Background functions don't return responses to clients
+    // They just process and save results
+
+    let jobId;
+    let store;
 
     try {
-        const body = JSON.parse(event.body);
-        const { examBoard, subject, paper, questionNumber } = body;
-
-        if (!examBoard || !subject) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Exam board and subject are required' })
-            };
+        const { jobId: id } = JSON.parse(event.body);
+        jobId = id;
+        
+        console.log('Processing search job:', jobId);
+        
+        // Get the store
+        store = getStore('essay-jobs');
+        
+        // Get the job data
+        const job = await store.get(jobId, { type: 'json' });
+        if (!job) {
+            console.error('Search job not found:', jobId);
+            return;
         }
+
+        const { examBoard, subject, paper, questionNumber } = job.input;
+        console.log('Searching for:', { examBoard, subject, paper, questionNumber });
 
         const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) {
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' })
-            };
+            await store.setJSON(jobId, { status: 'error', error: 'ANTHROPIC_API_KEY not configured' });
+            return;
         }
 
-        console.log('Searching for past papers:', { examBoard, subject, paper, questionNumber });
+        console.log('Calling Claude with web search...');
+        const result = await searchWithClaude(apiKey, examBoard, subject, paper, questionNumber);
+        console.log('Search completed');
 
-        // Build the search prompt
-        const searchQuery = buildSearchQuery(examBoard, subject, paper, questionNumber);
-        
-        // Call Claude with web search tool
-        const result = await searchWithClaude(apiKey, searchQuery, examBoard, subject, paper, questionNumber);
+        // Save the result
+        await store.setJSON(jobId, {
+            status: 'completed',
+            result: result,
+            timestamp: Date.now()
+        });
 
-        return {
-            statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(result)
-        };
+        console.log('Search result saved successfully');
 
     } catch (error) {
         console.error('Error:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: error.message })
-        };
+        if (store && jobId) {
+            try {
+                await store.setJSON(jobId, { status: 'error', error: error.message });
+            } catch (e) {
+                console.error('Failed to save error state:', e);
+            }
+        }
     }
 };
 
-function buildSearchQuery(examBoard, subject, paper, questionNumber) {
-    let query = `${examBoard} ${subject}`;
-    if (paper) query += ` ${paper}`;
-    query += ' past paper questions';
-    if (questionNumber) query += ` question ${questionNumber}`;
-    return query;
-}
-
-async function searchWithClaude(apiKey, searchQuery, examBoard, subject, paper, questionNumber) {
+async function searchWithClaude(apiKey, examBoard, subject, paper, questionNumber) {
     const systemPrompt = `You are an expert at finding UK exam past paper questions. Your task is to search for past paper questions and return structured information about them.
 
 When you find past paper questions, extract and return:
