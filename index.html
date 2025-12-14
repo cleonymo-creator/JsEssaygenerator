@@ -703,12 +703,232 @@
             color: white;
             border-style: solid;
         }
+
+        /* Quick Start / Past Paper Search */
+        .quick-start-card {
+            background: linear-gradient(135deg, var(--ink) 0%, #2a2a4e 100%);
+            color: var(--paper);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-start-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(201, 70, 61, 0.2) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .quick-start-card .card-title {
+            color: var(--paper);
+            border-bottom-color: rgba(255,255,255,0.2);
+        }
+
+        .quick-start-card .form-group label {
+            color: var(--paper);
+        }
+
+        .quick-start-card .label-hint {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .quick-start-card input,
+        .quick-start-card select {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+            color: var(--paper);
+        }
+
+        .quick-start-card input::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .quick-start-card input:focus,
+        .quick-start-card select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(201, 70, 61, 0.3);
+        }
+
+        .quick-start-card select option {
+            background: var(--ink);
+            color: var(--paper);
+        }
+
+        .btn-search {
+            background: var(--accent);
+            color: white;
+            border: none;
+        }
+
+        .btn-search:hover:not(:disabled) {
+            background: #a83a32;
+        }
+
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Search Results */
+        .search-results {
+            margin-top: 1.5rem;
+        }
+
+        .search-results-title {
+            font-family: 'Fraunces', Georgia, serif;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--paper);
+        }
+
+        .question-result {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .question-result:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .question-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .question-result-year {
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 0.9rem;
+        }
+
+        .question-result-marks {
+            background: var(--sage);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .question-result-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: rgba(255,255,255,0.9);
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .question-result-paper {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            margin-top: 0.5rem;
+        }
+
+        .search-loading {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .search-loading .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border-width: 3px;
+            margin: 0;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .search-error {
+            background: rgba(201, 70, 61, 0.2);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius);
+            padding: 1rem;
+            color: var(--paper);
+        }
+
+        /* Selected question highlight */
+        .question-result.selected {
+            background: rgba(90, 122, 107, 0.2);
+            border-color: var(--sage);
+        }
+
+        .question-result.selected::after {
+            content: '✓ Selected';
+            display: block;
+            margin-top: 0.5rem;
+            color: var(--sage);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Collapse toggle */
+        .collapse-toggle {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .collapse-toggle:hover {
+            color: var(--paper);
+        }
+
+        .collapse-toggle svg {
+            transition: transform 0.2s;
+        }
+
+        .collapse-toggle.collapsed svg {
+            transform: rotate(-90deg);
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="header-content">
-            <h1>📝 Essay Config Generator</h1>
+            <h1>ðŸ“ Essay Config Generator</h1>
             <p class="subtitle">Transform exam questions into guided writing configurations</p>
         </div>
     </header>
@@ -734,11 +954,76 @@
             </div>
         </div>
 
+        <!-- Quick Start: Past Paper Search -->
+        <div class="quick-start-card" id="quickStartCard">
+            <h2 class="card-title">
+                <span class="card-icon">🔍</span>
+                Quick Start: Search Past Papers
+            </h2>
+            <p style="margin-bottom: 1.25rem; opacity: 0.8;">
+                Search for past exam questions and auto-fill the form. Enter the exam board, subject, and optionally the paper and question number.
+            </p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="searchExamBoard">Exam Board <span class="required">*</span></label>
+                    <select id="searchExamBoard">
+                        <option value="">Select exam board...</option>
+                        <option value="AQA">AQA</option>
+                        <option value="Edexcel">Edexcel / Pearson</option>
+                        <option value="OCR">OCR</option>
+                        <option value="WJEC">WJEC / Eduqas</option>
+                        <option value="Cambridge">Cambridge International</option>
+                        <option value="IB">International Baccalaureate</option>
+                        <option value="SQA">SQA (Scotland)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="searchSubject">Subject <span class="required">*</span></label>
+                    <input type="text" id="searchSubject" placeholder="e.g., English Language, History, Biology">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="searchPaper">Paper / Component</label>
+                    <span class="label-hint">Optional - e.g., Paper 2, Component 1</span>
+                    <input type="text" id="searchPaper" placeholder="e.g., Paper 2 Section B">
+                </div>
+                <div class="form-group">
+                    <label for="searchQuestion">Question Number</label>
+                    <span class="label-hint">Optional - e.g., Question 4, Q5</span>
+                    <input type="text" id="searchQuestion" placeholder="e.g., Question 4">
+                </div>
+            </div>
+
+            <button class="btn-search" onclick="searchPastPapers()" id="searchBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="M21 21l-4.35-4.35"></path>
+                </svg>
+                Search Past Papers
+            </button>
+
+            <div id="searchResults"></div>
+
+            <div class="or-divider">
+                <span>or enter details manually below</span>
+            </div>
+
+            <button class="collapse-toggle" onclick="toggleQuickStart()" id="collapseToggle">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 9l-7 7-7-7"></path>
+                </svg>
+                <span>Hide quick start</span>
+            </button>
+        </div>
+
         <!-- Section 1: Basic Details -->
         <div class="section active" data-section="1">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📋</span>
+                    <span class="card-icon">ðŸ“‹</span>
                     Exam Information
                 </h2>
 
@@ -789,7 +1074,7 @@
         <div class="section" data-section="2">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">❓</span>
+                    <span class="card-icon">â“</span>
                     Exam Question
                 </h2>
 
@@ -809,7 +1094,7 @@
                     <label>Upload Source Documents</label>
                     <span class="label-hint">Optionally upload PDF or image files containing source material</span>
                     <div class="file-upload" id="sourceUpload">
-                        <div class="file-upload-icon">📄</div>
+                        <div class="file-upload-icon">ðŸ“„</div>
                         <div class="file-upload-text">Drop files here or click to browse</div>
                         <div class="file-upload-hint">PDF, PNG, JPG supported (max 10MB)</div>
                         <input type="file" id="sourceFiles" multiple accept=".pdf,.png,.jpg,.jpeg">
@@ -834,7 +1119,7 @@
         <div class="section" data-section="3">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">✔</span>
+                    <span class="card-icon">âœ”</span>
                     Mark Scheme
                 </h2>
 
@@ -865,7 +1150,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 <div class="tab-content" data-tab-content="upload">
                     <div class="form-group">
                         <div class="file-upload" id="markSchemeUpload">
-                            <div class="file-upload-icon">📋</div>
+                            <div class="file-upload-icon">ðŸ“‹</div>
                             <div class="file-upload-text">Drop mark scheme PDF here or click to browse</div>
                             <div class="file-upload-hint">PDF files supported (max 10MB)</div>
                             <input type="file" id="markSchemeFile" accept=".pdf">
@@ -883,7 +1168,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📊</span>
+                    <span class="card-icon">ðŸ“Š</span>
                     Grade Boundaries (Optional)
                 </h2>
                 <p style="margin-bottom: 1rem; opacity: 0.8; font-size: 0.95rem;">
@@ -891,7 +1176,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 </p>
 
                 <div class="boundary-hints" style="background: var(--sage-soft); padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.9rem;">
-                    <strong>💡 Suggested minimum:</strong> Enter boundaries for your lowest passing grade, a middle grade, and the top grade. For example:
+                    <strong>ðŸ’¡ Suggested minimum:</strong> Enter boundaries for your lowest passing grade, a middle grade, and the top grade. For example:
                     <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
                         <li>GCSE: Grade 4, Grade 6, Grade 9</li>
                         <li>A-Level: Grade E, Grade C, Grade A*</li>
@@ -947,7 +1232,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         <div class="section" data-section="4">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">⚙️</span>
+                    <span class="card-icon">âš™ï¸</span>
                     Configuration Options
                 </h2>
 
@@ -976,7 +1261,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📝</span>
+                    <span class="card-icon">ðŸ“</span>
                     Review Your Input
                 </h2>
                 <div id="reviewSummary" style="line-height: 1.8;"></div>
@@ -1003,7 +1288,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📄</span>
+                    <span class="card-icon">ðŸ“„</span>
                     Generated Configuration
                 </h2>
                 <pre class="output-preview" id="outputPreview"></pre>
@@ -1032,7 +1317,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
     </div>
 
     <footer>
-        Essay Config Generator • Powered by Claude AI
+        Essay Config Generator â€¢ Powered by Claude AI
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1045,6 +1330,8 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         let uploadedSourceFiles = [];
         let uploadedMarkSchemeFile = null;
         let generatedConfig = '';
+        let selectedPastPaperQuestion = null;
+        let quickStartCollapsed = false;
 
         // Extract text from PDF using PDF.js
         async function extractPdfText(file) {
@@ -1085,6 +1372,216 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                     });
                 });
             });
+        }
+
+        // Quick Start / Past Paper Search Functions
+        function toggleQuickStart() {
+            const card = document.getElementById('quickStartCard');
+            const toggle = document.getElementById('collapseToggle');
+            quickStartCollapsed = !quickStartCollapsed;
+            
+            if (quickStartCollapsed) {
+                card.style.maxHeight = '60px';
+                card.style.overflow = 'hidden';
+                toggle.classList.add('collapsed');
+                toggle.querySelector('span').textContent = 'Show quick start';
+            } else {
+                card.style.maxHeight = 'none';
+                card.style.overflow = 'visible';
+                toggle.classList.remove('collapsed');
+                toggle.querySelector('span').textContent = 'Hide quick start';
+            }
+        }
+
+        async function searchPastPapers() {
+            const examBoard = document.getElementById('searchExamBoard').value;
+            const subject = document.getElementById('searchSubject').value.trim();
+            const paper = document.getElementById('searchPaper').value.trim();
+            const questionNumber = document.getElementById('searchQuestion').value.trim();
+
+            if (!examBoard) {
+                alert('Please select an exam board');
+                return;
+            }
+            if (!subject) {
+                alert('Please enter a subject');
+                return;
+            }
+
+            const btn = document.getElementById('searchBtn');
+            const resultsContainer = document.getElementById('searchResults');
+            
+            btn.disabled = true;
+            resultsContainer.innerHTML = `
+                <div class="search-loading">
+                    <div class="loading-spinner"></div>
+                    <span>Searching for past papers... This may take a moment.</span>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/.netlify/functions/search-past-papers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ examBoard, subject, paper, questionNumber })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Search failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displaySearchResults(data);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsContainer.innerHTML = `
+                    <div class="search-error">
+                        <strong>Search failed:</strong> ${error.message}<br>
+                        <span style="opacity: 0.8; font-size: 0.9rem;">You can still enter the exam details manually below.</span>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function displaySearchResults(data) {
+            const container = document.getElementById('searchResults');
+            
+            if (data.error) {
+                container.innerHTML = `
+                    <div class="search-error">
+                        <strong>Error:</strong> ${typeof data.error === 'string' ? data.error : JSON.stringify(data.error)}
+                    </div>
+                `;
+                return;
+            }
+
+            if (!data.questions || data.questions.length === 0) {
+                let message = '<div class="no-results">';
+                message += '<p><strong>No specific past papers found.</strong></p>';
+                if (data.rawResponse) {
+                    message += `<p style="margin-top: 1rem; text-align: left; font-size: 0.9rem;">${data.rawResponse.substring(0, 500)}${data.rawResponse.length > 500 ? '...' : ''}</p>`;
+                }
+                message += '<p style="margin-top: 1rem;">Try adjusting your search terms or enter details manually.</p>';
+                message += '</div>';
+                container.innerHTML = message;
+                return;
+            }
+
+            let html = `
+                <div class="search-results">
+                    <h3 class="search-results-title">Found ${data.questions.length} question${data.questions.length > 1 ? 's' : ''} - Click to use:</h3>
+            `;
+
+            data.questions.forEach((q, index) => {
+                html += `
+                    <div class="question-result" onclick="selectQuestion(${index})" data-index="${index}">
+                        <div class="question-result-header">
+                            <span class="question-result-year">${q.year || 'Unknown year'}</span>
+                            ${q.totalMarks ? `<span class="question-result-marks">${q.totalMarks} marks</span>` : ''}
+                        </div>
+                        <div class="question-result-text">${escapeHtml(q.questionText || 'No question text available')}</div>
+                        ${q.paperName ? `<div class="question-result-paper">${escapeHtml(q.paperName)}</div>` : ''}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Store the questions data for selection
+            window.searchResultsData = data.questions;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function selectQuestion(index) {
+            const questions = window.searchResultsData;
+            if (!questions || !questions[index]) return;
+
+            const q = questions[index];
+            selectedPastPaperQuestion = q;
+
+            // Update visual selection
+            document.querySelectorAll('.question-result').forEach((el, i) => {
+                el.classList.toggle('selected', i === index);
+            });
+
+            // Auto-fill the form fields
+            populateFormFromQuestion(q);
+
+            // Show a brief confirmation
+            const resultsTitle = document.querySelector('.search-results-title');
+            if (resultsTitle) {
+                resultsTitle.innerHTML = `Found ${questions.length} question${questions.length > 1 ? 's' : ''} - <span style="color: var(--sage);">✓ Question selected!</span>`;
+            }
+
+            // Scroll to the form section after a brief delay
+            setTimeout(() => {
+                document.querySelector('[data-section="1"]').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
+
+        function populateFormFromQuestion(q) {
+            // Get exam info from search
+            const examBoard = document.getElementById('searchExamBoard').value;
+            const searchSubject = document.getElementById('searchSubject').value;
+            
+            // Populate Section 1: Exam Details
+            document.getElementById('subject').value = searchSubject || '';
+            document.getElementById('examBoard').value = examBoard || '';
+            
+            if (q.totalMarks) {
+                document.getElementById('totalMarks').value = q.totalMarks;
+            }
+            
+            if (q.paperName) {
+                document.getElementById('paperName').value = q.paperName;
+            }
+            
+            // Try to infer year group from subject
+            const subjectLower = searchSubject.toLowerCase();
+            if (subjectLower.includes('gcse')) {
+                document.getElementById('yearGroup').value = 'Year 11';
+            } else if (subjectLower.includes('a-level') || subjectLower.includes('a level')) {
+                document.getElementById('yearGroup').value = 'Year 13';
+            } else if (subjectLower.includes('ib')) {
+                document.getElementById('yearGroup').value = 'Year 13';
+            }
+
+            // Populate Section 2: Exam Question
+            if (q.questionText) {
+                document.getElementById('examQuestion').value = q.questionText;
+            }
+            
+            if (q.sourceMaterial) {
+                document.getElementById('sourceMaterial').value = q.sourceMaterial;
+            }
+
+            // Populate Section 3: Mark Scheme
+            if (q.markScheme) {
+                document.getElementById('markScheme').value = q.markScheme;
+            }
+
+            // Add source URL to additional notes if available
+            if (q.sourceUrl) {
+                const currentNotes = document.getElementById('additionalNotes').value;
+                const sourceNote = `Source: ${q.sourceUrl}`;
+                if (!currentNotes.includes(sourceNote)) {
+                    document.getElementById('additionalNotes').value = currentNotes 
+                        ? currentNotes + '\n\n' + sourceNote 
+                        : sourceNote;
+                }
+            }
+
+            // Update the review summary
+            updateReviewSummary();
         }
 
         // File upload handling
@@ -1194,7 +1691,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 indicator.className = 'uploaded-file';
                 indicator.style.opacity = '0.7';
             }
-            indicator.innerHTML = `<span class="uploaded-file-icon">⏳</span><span class="uploaded-file-name">${text}</span>`;
+            indicator.innerHTML = `<span class="uploaded-file-icon">â³</span><span class="uploaded-file-name">${text}</span>`;
             container.appendChild(indicator);
         }
 
@@ -1219,7 +1716,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             const container = document.getElementById('sourceFilesList');
             container.innerHTML = uploadedSourceFiles.map((file, index) => `
                 <div class="uploaded-file">
-                    <span class="uploaded-file-icon">${file.extractedText ? '📝' : '📄'}</span>
+                    <span class="uploaded-file-icon">${file.extractedText ? 'ðŸ“' : 'ðŸ“„'}</span>
                     <span class="uploaded-file-name">${file.name}${file.extractedText ? ' (text extracted)' : ''}</span>
                     <button class="uploaded-file-remove" onclick="removeSourceFile(${index})">&times;</button>
                 </div>
@@ -1236,7 +1733,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             if (uploadedMarkSchemeFile) {
                 container.innerHTML = `
                     <div class="uploaded-file">
-                        <span class="uploaded-file-icon">${uploadedMarkSchemeFile.extractedText ? '📝' : '📋'}</span>
+                        <span class="uploaded-file-icon">${uploadedMarkSchemeFile.extractedText ? 'ðŸ“' : 'ðŸ“‹'}</span>
                         <span class="uploaded-file-name">${uploadedMarkSchemeFile.name}${uploadedMarkSchemeFile.extractedText ? ' (text extracted)' : ''}</span>
                         <button class="uploaded-file-remove" onclick="removeMarkSchemeFile()">&times;</button>
                     </div>
