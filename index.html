@@ -634,6 +634,75 @@
             border-radius: 3px;
             font-size: 0.9em;
         }
+
+        /* Grade boundaries */
+        .grade-boundaries-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .grade-boundary-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+            padding: 0.75rem;
+            background: var(--paper-warm);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        .grade-boundary-row .form-group {
+            margin-bottom: 0;
+        }
+
+        .grade-boundary-row label {
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .grade-boundary-row input {
+            padding: 0.625rem 0.75rem;
+        }
+
+        .btn-remove-grade {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            line-height: 1;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .btn-remove-grade:hover {
+            opacity: 1;
+        }
+
+        .btn-add-grade {
+            background: var(--sage-soft);
+            color: var(--sage);
+            border: 1px dashed var(--sage);
+            padding: 0.625rem 1rem;
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-add-grade:hover {
+            background: var(--sage);
+            color: white;
+            border-style: solid;
+        }
     </style>
 </head>
 <body>
@@ -704,17 +773,6 @@
                     <label for="paperName">Paper / Component Name</label>
                     <span class="label-hint">Optional - helps identify the specific exam paper</span>
                     <input type="text" id="paperName" placeholder="e.g., Paper 2 Section B, Component 1">
-                </div>
-
-                <div class="form-group">
-                    <label for="gradeBoundaries">Grade Boundaries</label>
-                    <span class="label-hint">Optional - enter grade thresholds. You can enter just a few grades and the system will interpolate the rest.</span>
-                    <textarea id="gradeBoundaries" style="min-height: 100px;" placeholder="e.g., just enter a few grades:
-Grade 9: 36-40
-Grade 7: 28-31
-Grade 5: 20-23
-
-The system will automatically calculate missing grades (8, 6, 4, etc.)"></textarea>
                 </div>
             </div>
 
@@ -823,6 +881,56 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 </div>
             </div>
 
+            <div class="card">
+                <h2 class="card-title">
+                    <span class="card-icon">📊</span>
+                    Grade Boundaries (Optional)
+                </h2>
+                <p style="margin-bottom: 1rem; opacity: 0.8; font-size: 0.95rem;">
+                    Provide grade boundaries to generate descriptors based on the mark scheme. For best results, include at least <strong>3 boundaries</strong> (e.g., low, mid, and high grades). Missing boundaries will be interpolated automatically.
+                </p>
+
+                <div class="boundary-hints" style="background: var(--sage-soft); padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.9rem;">
+                    <strong>💡 Suggested minimum:</strong> Enter boundaries for your lowest passing grade, a middle grade, and the top grade. For example:
+                    <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
+                        <li>GCSE: Grade 4, Grade 6, Grade 9</li>
+                        <li>A-Level: Grade E, Grade C, Grade A*</li>
+                        <li>IB: Level 3, Level 5, Level 7</li>
+                    </ul>
+                </div>
+
+                <div class="grade-boundaries-container" id="gradeBoundariesContainer">
+                    <div class="grade-boundary-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Grade</label>
+                            <input type="text" class="grade-name" placeholder="e.g., 9, A*, Distinction">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Min Marks</label>
+                            <input type="number" class="grade-min" placeholder="e.g., 36" min="0">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Max Marks</label>
+                            <input type="number" class="grade-max" placeholder="e.g., 40" min="0">
+                        </div>
+                        <button type="button" class="btn-remove-grade" onclick="removeGradeBoundary(this)" title="Remove">&times;</button>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn-add-grade" onclick="addGradeBoundary()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Add Grade Boundary
+                </button>
+
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>
+                        <input type="checkbox" id="includeGradeDescriptors" checked>
+                        Generate detailed descriptors for each grade
+                    </label>
+                    <span class="label-hint">Claude will create specific criteria descriptions for what constitutes each grade level, and interpolate any missing grades</span>
+                </div>
+            </div>
+
             <div class="button-row">
                 <button class="btn-secondary" onclick="prevSection()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
@@ -839,7 +947,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         <div class="section" data-section="4">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">⚙️</span>
+                    <span class="card-icon">⚙️</span>
                     Configuration Options
                 </h2>
 
@@ -868,7 +976,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">🔍</span>
+                    <span class="card-icon">📝</span>
                     Review Your Input
                 </h2>
                 <div id="reviewSummary" style="line-height: 1.8;"></div>
@@ -1214,6 +1322,11 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         }
 
         function updateReviewSummary() {
+            const boundaries = getGradeBoundaries();
+            const boundariesText = boundaries.length > 0 
+                ? boundaries.map(b => `${b.grade}: ${b.minMarks || '?'}-${b.maxMarks || '?'}`).join(', ')
+                : 'Not specified';
+            
             const summary = document.getElementById('reviewSummary');
             summary.innerHTML = `
                 <p><strong>Subject:</strong> ${document.getElementById('subject').value || 'Not specified'}</p>
@@ -1221,10 +1334,10 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 <p><strong>Exam Board:</strong> ${document.getElementById('examBoard').value || 'Not specified'}</p>
                 <p><strong>Total Marks:</strong> ${document.getElementById('totalMarks').value || 'Not specified'}</p>
                 <p><strong>Time Allowed:</strong> ${document.getElementById('timeAllowed').value ? document.getElementById('timeAllowed').value + ' minutes' : 'Not specified'}</p>
-                <p><strong>Grade Boundaries:</strong> ${document.getElementById('gradeBoundaries').value ? 'Provided' : 'Not specified'}</p>
                 <p><strong>Question:</strong> ${document.getElementById('examQuestion').value.substring(0, 100)}${document.getElementById('examQuestion').value.length > 100 ? '...' : ''}</p>
                 <p><strong>Source Files:</strong> ${uploadedSourceFiles.length > 0 ? uploadedSourceFiles.map(f => f.name).join(', ') : 'None'}</p>
                 <p><strong>Mark Scheme:</strong> ${uploadedMarkSchemeFile ? uploadedMarkSchemeFile.name : (document.getElementById('markScheme').value ? 'Provided (text)' : 'Not provided')}</p>
+                <p><strong>Grade Boundaries:</strong> ${boundariesText}</p>
             `;
         }
 
@@ -1329,6 +1442,54 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
+        // Add more grade boundaries
+        function addGradeBoundary() {
+            const container = document.getElementById('gradeBoundariesContainer');
+            const row = document.createElement('div');
+            row.className = 'grade-boundary-row';
+            row.innerHTML = `
+                <div class="form-group" style="flex: 1;">
+                    <label>Grade</label>
+                    <input type="text" class="grade-name" placeholder="e.g., 9, A*, Distinction">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Min Marks</label>
+                    <input type="number" class="grade-min" placeholder="e.g., 36" min="0">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Max Marks</label>
+                    <input type="number" class="grade-max" placeholder="e.g., 40" min="0">
+                </div>
+                <button type="button" class="btn-remove-grade" onclick="removeGradeBoundary(this)" title="Remove">&times;</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function removeGradeBoundary(btn) {
+            const container = document.getElementById('gradeBoundariesContainer');
+            if (container.children.length > 1) {
+                btn.closest('.grade-boundary-row').remove();
+            }
+        }
+
+        function getGradeBoundaries() {
+            const boundaries = [];
+            document.querySelectorAll('.grade-boundary-row').forEach(row => {
+                const grade = row.querySelector('.grade-name').value.trim();
+                const min = row.querySelector('.grade-min').value;
+                const max = row.querySelector('.grade-max').value;
+                if (grade && (min || max)) {
+                    boundaries.push({
+                        grade,
+                        minMarks: min ? parseInt(min) : null,
+                        maxMarks: max ? parseInt(max) : null
+                    });
+                }
+            });
+            // Sort by minMarks descending (highest grade first)
+            return boundaries.sort((a, b) => (b.minMarks || 0) - (a.minMarks || 0));
+        }
+
         function buildPayload() {
             // Process source files - convert extracted PDF text to sourceMaterial
             let additionalSourceText = '';
@@ -1363,7 +1524,6 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 totalMarks: parseInt(document.getElementById('totalMarks').value),
                 timeAllowed: document.getElementById('timeAllowed').value ? parseInt(document.getElementById('timeAllowed').value) : null,
                 paperName: document.getElementById('paperName').value,
-                gradeBoundaries: document.getElementById('gradeBoundaries').value,
                 examQuestion: document.getElementById('examQuestion').value,
                 sourceMaterial: combinedSourceMaterial,
                 sourceFiles: imageFiles, // Only images now, PDFs converted to text
@@ -1373,7 +1533,9 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 minWords: parseInt(document.getElementById('minWords').value),
                 targetWords: parseInt(document.getElementById('targetWords').value),
                 maxAttempts: parseInt(document.getElementById('maxAttempts').value),
-                teacherPassword: document.getElementById('teacherPassword').value
+                teacherPassword: document.getElementById('teacherPassword').value,
+                gradeBoundaries: getGradeBoundaries(),
+                includeGradeDescriptors: document.getElementById('includeGradeDescriptors').checked
             };
         }
 
@@ -1396,6 +1558,8 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                     el.value = el.defaultValue;
                 } else if (el.type === 'text' || el.tagName === 'TEXTAREA') {
                     el.value = '';
+                } else if (el.type === 'checkbox') {
+                    el.checked = el.defaultChecked;
                 }
             });
 
@@ -1404,6 +1568,26 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             uploadedMarkSchemeFile = null;
             updateSourceFilesList();
             updateMarkSchemeDisplay();
+
+            // Reset grade boundaries to single empty row
+            const container = document.getElementById('gradeBoundariesContainer');
+            container.innerHTML = `
+                <div class="grade-boundary-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Grade</label>
+                        <input type="text" class="grade-name" placeholder="e.g., 9, A*, Distinction">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Min Marks</label>
+                        <input type="number" class="grade-min" placeholder="e.g., 36" min="0">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Max Marks</label>
+                        <input type="number" class="grade-max" placeholder="e.g., 40" min="0">
+                    </div>
+                    <button type="button" class="btn-remove-grade" onclick="removeGradeBoundary(this)" title="Remove">&times;</button>
+                </div>
+            `;
 
             // Reset tabs
             document.querySelectorAll('.tab').forEach((tab, i) => {

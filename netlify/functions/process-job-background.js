@@ -114,9 +114,10 @@ function makeRequest(apiKey, messages) {
 
 function buildMessages(data) {
     const {
-        subject, yearGroup, examBoard, totalMarks, timeAllowed, paperName, gradeBoundaries,
+        subject, yearGroup, examBoard, totalMarks, timeAllowed, paperName,
         examQuestion, sourceMaterial, sourceFiles, markScheme, markSchemeFile,
-        additionalNotes, minWords, targetWords, maxAttempts, teacherPassword
+        additionalNotes, minWords, targetWords, maxAttempts, teacherPassword,
+        gradeBoundaries, includeGradeDescriptors
     } = data;
 
     const content = [];
@@ -140,8 +141,54 @@ function buildMessages(data) {
         content.push({ type: 'text', text: `[Mark scheme: ${markSchemeFile.name}]` });
     }
 
-    // Process and interpolate grade boundaries
-    const processedBoundaries = processGradeBoundaries(gradeBoundaries, totalMarks);
+    const hasGradeBoundaries = gradeBoundaries && gradeBoundaries.length > 0;
+
+    // Build grade boundaries section for prompt
+    let gradeBoundariesSection = '';
+    if (hasGradeBoundaries) {
+        gradeBoundariesSection = `\n## GRADE BOUNDARIES (PROVIDED BY TEACHER)\n`;
+        gradeBoundariesSection += `The following grade boundaries have been provided:\n`;
+        gradeBoundaries.forEach(b => {
+            gradeBoundariesSection += `- Grade ${b.grade}: ${b.minMarks || '?'}-${b.maxMarks || '?'} marks\n`;
+        });
+        
+        gradeBoundariesSection += `\n**IMPORTANT INSTRUCTIONS FOR GRADE BOUNDARIES:**\n`;
+        gradeBoundariesSection += `1. You MUST interpolate any missing grades between the provided boundaries\n`;
+        gradeBoundariesSection += `2. For example, if given Grade 9 (36-40), Grade 6 (24-28), and Grade 4 (16-20), you should also generate Grade 8, Grade 7, and Grade 5\n`;
+        gradeBoundariesSection += `3. Calculate interpolated mark boundaries proportionally based on the gaps\n`;
+        gradeBoundariesSection += `4. Generate descriptors for ALL grades (provided and interpolated)\n`;
+        gradeBoundariesSection += `5. Each descriptor should be 2-3 sentences explaining what a response at that level demonstrates, directly referencing the mark scheme criteria\n`;
+        gradeBoundariesSection += `6. Order grades from highest to lowest in the output\n`;
+    }
+
+    // Build the grading section of the config template
+    let gradingSection = '';
+    if (hasGradeBoundaries) {
+        // When grade boundaries are provided, use them instead of generic gradingCriteria
+        gradingSection = `
+  // Grade boundaries with descriptors based on mark scheme
+  gradeBoundaries: [
+    // INTERPOLATE all grades between the provided boundaries
+    // Include ALL grades from highest to lowest
+    // Example format for each grade:
+    {
+      grade: "[grade name]",
+      minMarks: [minimum marks for this grade],
+      maxMarks: [maximum marks for this grade],
+      descriptor: "[2-3 sentences describing what a response at this grade demonstrates, referencing specific mark scheme criteria]"
+    }
+    // ... repeat for all grades (provided AND interpolated)
+  ]`;
+    } else {
+        // No grade boundaries - use the generic gradingCriteria
+        gradingSection = `
+  gradingCriteria: {
+    content: { weight: 30, description: "[From mark scheme]" },
+    analysis: { weight: 30, description: "[From mark scheme]" },
+    structure: { weight: 20, description: "[From mark scheme]" },
+    expression: { weight: 20, description: "[From mark scheme]" }
+  }`;
+    }
 
     const prompt = `You are an expert educational content designer. Create a guided essay writing configuration.
 
@@ -152,7 +199,6 @@ function buildMessages(data) {
 - Total Marks: ${totalMarks || 'Not specified'}
 - Time Allowed: ${timeAllowed ? timeAllowed + ' minutes' : 'Not specified'}
 ${paperName ? `- Paper: ${paperName}` : ''}
-${processedBoundaries ? `\n## GRADE BOUNDARIES\n${processedBoundaries}\n` : ''}
 
 ## EXAM QUESTION
 ${examQuestion || 'No question provided'}
@@ -161,7 +207,7 @@ ${sourceMaterial ? `## SOURCE MATERIAL\n${sourceMaterial}\n` : ''}
 
 ## MARK SCHEME
 ${markScheme || 'No mark scheme provided - create appropriate criteria for this subject.'}
-
+${gradeBoundariesSection}
 ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 
 ## CONFIGURATION SETTINGS
@@ -175,6 +221,8 @@ ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 - Use simple dashes (-) or asterisks (*) for bullet points
 - Avoid curly quotes - use straight quotes only
 - The essay ID should be lowercase with hyphens (e.g., 'creative-writing-sunset')
+${hasGradeBoundaries ? `- CRITICAL: You MUST interpolate missing grades and include ALL grades from highest to lowest
+- Each grade descriptor must specifically reference the mark scheme criteria provided above` : ''}
 
 ## TASK
 Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid JavaScript using this EXACT format:
@@ -186,6 +234,7 @@ window.ESSAYS['[essay-id-here]'] = {
   title: "[Title for this essay task]",
   subject: "${subject || 'Subject'}",
   yearGroup: "${yearGroup || 'Year'}",
+  totalMarks: ${totalMarks || 40},
   essayTitle: "[The exam question]",
   instructions: "[Clear instructions for students]",
   originalTask: \`## Exam Question
@@ -232,13 +281,7 @@ window.ESSAYS['[essay-id-here]'] = {
       exampleQuotes: [],
       points: [marks]
     }
-  ],
-  gradingCriteria: {
-    content: { weight: 30, description: "[From mark scheme]" },
-    analysis: { weight: 30, description: "[From mark scheme]" },
-    structure: { weight: 20, description: "[From mark scheme]" },
-    expression: { weight: 20, description: "[From mark scheme]" }
-  }
+  ],${gradingSection}
 };
 \`\`\`
 
@@ -246,120 +289,6 @@ Generate the complete configuration using ONLY plain ASCII characters:`;
 
     content.push({ type: 'text', text: prompt });
     return [{ role: 'user', content }];
-}
-
-function processGradeBoundaries(boundariesText, totalMarks) {
-    if (!boundariesText || !boundariesText.trim()) {
-        return null;
-    }
-
-    // Parse the input to extract grade-mark pairs
-    const lines = boundariesText.split('\n').map(l => l.trim()).filter(l => l);
-    const boundaries = [];
-    
-    for (const line of lines) {
-        // Match patterns like "Grade 9: 36-40" or "9: 36-40" or "Grade A*: 80-100"
-        const match = line.match(/(?:Grade\s+)?([A-Z\d*+]+)\s*:\s*(\d+)(?:\s*-\s*(\d+))?/i);
-        if (match) {
-            const grade = match[1].toUpperCase();
-            const minMark = parseInt(match[2]);
-            const maxMark = match[3] ? parseInt(match[3]) : minMark;
-            boundaries.push({ grade, minMark, maxMark });
-        }
-    }
-
-    if (boundaries.length === 0) {
-        return boundariesText; // Return as-is if we can't parse it
-    }
-
-    // Sort by minMark descending (highest grade first)
-    boundaries.sort((a, b) => b.minMark - a.minMark);
-
-    // Determine grading system (numeric 9-1, A*-U, etc.)
-    const isNumeric = boundaries.every(b => /^\d+$/.test(b.grade));
-    
-    if (isNumeric) {
-        // Fill in missing numeric grades (9, 8, 7, 6, 5, 4, 3, 2, 1)
-        const numericBoundaries = boundaries.map(b => ({
-            ...b,
-            gradeNum: parseInt(b.grade)
-        }));
-
-        const allGrades = [];
-        const knownGrades = new Map(numericBoundaries.map(b => [b.gradeNum, b]));
-
-        // Determine range (usually 9 to 1, but could be different)
-        const maxGrade = Math.max(...numericBoundaries.map(b => b.gradeNum));
-        const minGrade = Math.min(...numericBoundaries.map(b => b.gradeNum));
-
-        for (let grade = maxGrade; grade >= minGrade; grade--) {
-            if (knownGrades.has(grade)) {
-                allGrades.push(knownGrades.get(grade));
-            } else {
-                // Interpolate
-                const interpolated = interpolateGrade(grade, knownGrades, totalMarks);
-                if (interpolated) {
-                    allGrades.push(interpolated);
-                }
-            }
-        }
-
-        // Format output
-        return allGrades.map(g => `Grade ${g.grade}: ${g.minMark}-${g.maxMark} marks`).join('\n');
-    } else {
-        // For letter grades, just return what was provided (interpolation is complex)
-        return boundaries.map(b => `Grade ${b.grade}: ${b.minMark}-${b.maxMark} marks`).join('\n');
-    }
-}
-
-function interpolateGrade(grade, knownGrades, totalMarks) {
-    // Find the nearest known grades above and below
-    let gradeAbove = null;
-    let gradeBelow = null;
-
-    const knownGradeNums = Array.from(knownGrades.keys()).sort((a, b) => b - a);
-    
-    for (const g of knownGradeNums) {
-        if (g > grade && (gradeAbove === null || g < gradeAbove)) {
-            gradeAbove = g;
-        }
-        if (g < grade && (gradeBelow === null || g > gradeBelow)) {
-            gradeBelow = g;
-        }
-    }
-
-    if (gradeAbove !== null && gradeBelow !== null) {
-        // Interpolate between two known grades
-        const upperBound = knownGrades.get(gradeAbove);
-        const lowerBound = knownGrades.get(gradeBelow);
-        
-        const gradeDiff = gradeAbove - gradeBelow;
-        const markDiff = upperBound.minMark - lowerBound.minMark;
-        const markPerGrade = markDiff / gradeDiff;
-        
-        const minMark = Math.round(upperBound.minMark - (gradeAbove - grade) * markPerGrade);
-        const maxMark = Math.round(minMark + markPerGrade - 1);
-        
-        return { grade: grade.toString(), gradeNum: grade, minMark, maxMark };
-    } else if (gradeAbove !== null) {
-        // Extrapolate below the lowest known grade
-        const upperBound = knownGrades.get(gradeAbove);
-        const avgMarkPerGrade = Math.floor(upperBound.minMark / gradeAbove);
-        const minMark = Math.max(0, Math.round(upperBound.minMark - (gradeAbove - grade) * avgMarkPerGrade));
-        const maxMark = Math.round(upperBound.minMark - 1);
-        
-        return { grade: grade.toString(), gradeNum: grade, minMark, maxMark };
-    } else if (gradeBelow !== null) {
-        // Extrapolate above the highest known grade
-        const lowerBound = knownGrades.get(gradeBelow);
-        const avgMarkPerGrade = Math.floor((totalMarks - lowerBound.minMark) / (10 - gradeBelow));
-        const minMark = Math.round(lowerBound.maxMark + 1 + (grade - gradeBelow - 1) * avgMarkPerGrade);
-        const maxMark = Math.min(totalMarks, Math.round(minMark + avgMarkPerGrade - 1));
-        
-        return { grade: grade.toString(), gradeNum: grade, minMark, maxMark };
-    }
-
-    return null;
 }
 
 function extractJavaScript(text) {
