@@ -114,7 +114,7 @@ function makeRequest(apiKey, messages) {
 
 function buildMessages(data) {
     const {
-        subject, yearGroup, examBoard, totalMarks, timeAllowed, paperName,
+        subject, yearGroup, examBoard, totalMarks, timeAllowed, paperName, gradeBoundaries,
         examQuestion, sourceMaterial, sourceFiles, markScheme, markSchemeFile,
         additionalNotes, minWords, targetWords, maxAttempts, teacherPassword
     } = data;
@@ -140,7 +140,10 @@ function buildMessages(data) {
         content.push({ type: 'text', text: `[Mark scheme: ${markSchemeFile.name}]` });
     }
 
-    const prompt = `You are an expert educational content designer. Create a guided essay writing configuration compatible with a holistic grading system.
+    // Process and interpolate grade boundaries
+    const processedBoundaries = processGradeBoundaries(gradeBoundaries, totalMarks);
+
+    const prompt = `You are an expert educational content designer. Create a guided essay writing configuration.
 
 ## EXAM INFORMATION
 - Subject: ${subject || 'Not specified'}
@@ -149,6 +152,7 @@ function buildMessages(data) {
 - Total Marks: ${totalMarks || 'Not specified'}
 - Time Allowed: ${timeAllowed ? timeAllowed + ' minutes' : 'Not specified'}
 ${paperName ? `- Paper: ${paperName}` : ''}
+${processedBoundaries ? `\n## GRADE BOUNDARIES\n${processedBoundaries}\n` : ''}
 
 ## EXAM QUESTION
 ${examQuestion || 'No question provided'}
@@ -167,15 +171,10 @@ ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 - Teacher password: ${teacherPassword || 'teacher123'}
 
 ## IMPORTANT FORMATTING RULES
-- Use ONLY plain ASCII characters - no special symbols, checkmarks, or accented characters
+- Use ONLY plain ASCII characters - no special symbols, checkmarks, emojis, or accented characters
 - Use simple dashes (-) or asterisks (*) for bullet points
 - Avoid curly quotes - use straight quotes only
-- The essay ID should be lowercase with hyphens (e.g., 'macbeth-ambition-essay')
-- For icon field, use a simple emoji that represents the subject/topic
-
-## HOLISTIC GRADING SYSTEM
-This system uses holistic assessment - DO NOT include "points" fields in paragraphs.
-Instead, provide rich grade descriptors in officialMarkScheme if this is an exam-based task.
+- The essay ID should be lowercase with hyphens (e.g., 'creative-writing-sunset')
 
 ## TASK
 Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid JavaScript using this EXACT format:
@@ -183,252 +182,184 @@ Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid J
 \`\`\`javascript
 window.ESSAYS = window.ESSAYS || {};
 window.ESSAYS['[essay-id-here]'] = {
-  // === REQUIRED CORE FIELDS ===
   id: '[essay-id-here]',
-  title: "[Short title for this essay task]",
+  title: "[Title for this essay task]",
   subject: "${subject || 'Subject'}",
   yearGroup: "${yearGroup || 'Year'}",
-  description: "[Brief one-line description shown on selection screen]",
-  icon: "📝", // Choose appropriate emoji for the topic
-  
-  // === ESSAY QUESTION & INSTRUCTIONS ===
-  essayTitle: "[The main essay question students will answer]",
-  instructions: "[Clear instructions shown to students at the start]",
-  
-  // === ORIGINAL TASK (shown in right panel) ===
+  essayTitle: "[The exam question]",
+  instructions: "[Clear instructions for students]",
   originalTask: \`## Exam Question
+[Full question]
 
-[Full exam question as students would see it]
-
-${examBoard ? '**Exam Board**: ' + examBoard : ''}
-${totalMarks ? '**Total Marks**: ' + totalMarks : ''}
-${timeAllowed ? '**Time Allowed**: ' + timeAllowed + ' minutes' : ''}
-
-### Assessment Objectives:
-- [Assessment objective 1 from mark scheme]
-- [Assessment objective 2 from mark scheme]
-
-### What to include:
-- [Key requirement 1]
-- [Key requirement 2]
-- [Key requirement 3]\`,
-  
-  // === GLOBAL SOURCE MATERIAL (optional but recommended) ===
-  // Include this if there's context/background that applies to the whole essay
-  ${sourceMaterial ? `sourceMaterial: \`## Background Information
-
-[Relevant context that students should consider throughout their essay]
-
-### Key Facts:
-- [Important contextual point 1]
-- [Important contextual point 2]
-
-### Relevant Information:
-[Any quotes, data, or background material that applies to the whole essay]\`,` : '// sourceMaterial: `## Background\\n[Add global context if needed]`,'}
-  
-  // === WRITING CONSTRAINTS ===
+## Mark Scheme Summary
+[Key criteria]\`,
   maxAttempts: ${maxAttempts || 3},
   minWordsPerParagraph: ${minWords || 80},
   targetWordsPerParagraph: ${targetWords || 150},
   teacherPassword: "${teacherPassword || 'teacher123'}",
-  
-  // === PARAGRAPHS ARRAY ===
   paragraphs: [
     {
-      id: "intro",
+      id: 1,
       title: "Introduction",
       type: "introduction",
-      
       learningMaterial: \`## Writing Your Introduction
 
-[Detailed, specific guidance for writing an introduction for THIS essay]
+[Detailed, specific guidance for this essay...]
 
-### Key Points to Cover:
-- [Specific point 1 relevant to this essay question]
+### Key Points to Cover
+- [Specific point 1]
 - [Specific point 2]
-- [Specific point 3]
 
-### Structure Tips:
-- [Structural advice 1]
-- [Structural advice 2]
-
-### Sentence Starters:
-- "[Relevant starter for this topic]..."
-- "[Another option]..."\`,
-      
-      writingPrompt: "[Clear instruction about what to write in the introduction]",
-      
-      keyPoints: [
-        "[Key point 1 to address in introduction]",
-        "[Key point 2]",
-        "[Key point 3]"
-      ],
-      
-      exampleQuotes: [] // Usually empty for introductions
-      
-      // Optional: Add paragraph-specific sourceMaterial only if needed
-      // sourceMaterial: \`## Introduction Resources\\n[Specific material for intro]\`
+### Sentence Starters
+- "[Relevant starter]..."
+\`,
+      writingPrompt: "[Clear instruction]",
+      keyPoints: ["[Mark scheme criterion]"],
+      exampleQuotes: [],
+      points: [marks]
     },
-    
-    // Body paragraph 1
+    // More body paragraphs with detailed guidance...
     {
-      id: "para1",
-      title: "[Title for first body paragraph]",
-      type: "body",
-      
-      learningMaterial: \`## [Paragraph topic]
-
-[Detailed teaching content for this paragraph]
-
-### Key Analysis Points:
-- [Analysis point 1]
-- [Analysis point 2]
-
-### Evidence to Use:
-- [What evidence/quotes to include]
-
-### Techniques to Discuss:
-- [Technique 1 and its effect]
-- [Technique 2 and its effect]\`,
-      
-      writingPrompt: "[Instruction for what to write in this paragraph]",
-      
-      keyPoints: [
-        "[Key point 1 for this paragraph]",
-        "[Key point 2]",
-        "[Key point 3]"
-      ],
-      
-      exampleQuotes: [
-        "[Relevant quote 1]",
-        "[Relevant quote 2]"
-      ],
-      
-      // If this paragraph needs specific source material (extract, data, etc.):
-      sourceMaterial: \`## [Title for source material]
-
-[Specific extract, passage, data, or context for THIS paragraph]
-
-### Analysis Guidance:
-- [What to look for in this material]
-- [Key points to analyze]
-
-### Key Vocabulary:
-- [Term 1]: [definition]
-- [Term 2]: [definition]\`
-    },
-    
-    // Additional body paragraphs (2-4 total body paragraphs)...
-    
-    {
-      id: "conclusion",
+      id: [n],
       title: "Conclusion",
       type: "conclusion",
-      
       learningMaterial: \`## Writing Your Conclusion
 
-[Guidance for writing a strong conclusion]
-
-### What to Include:
-- [Summary requirement]
-- [Final evaluation requirement]
-- [Link back to question]
-
-### Avoid:
-- Introducing new points
-- Simply repeating introduction
-- Ending abruptly\`,
-      
-      writingPrompt: "[Instruction for conclusion]",
-      
-      keyPoints: [
-        "[Summary point]",
-        "[Final evaluation]",
-        "[Link to question/context]"
-      ],
-      
-      exampleQuotes: [] // Usually empty for conclusions
+[Specific guidance]
+\`,
+      writingPrompt: "[Instruction]",
+      keyPoints: ["[Criterion]"],
+      exampleQuotes: [],
+      points: [marks]
     }
   ],
-  
-  // === GRADING CRITERIA (must sum to 100) ===
   gradingCriteria: {
-    content: { 
-      weight: 30, 
-      description: "[What counts as good content - based on mark scheme]" 
-    },
-    analysis: { 
-      weight: 30, 
-      description: "[What counts as good analysis - based on mark scheme]" 
-    },
-    structure: { 
-      weight: 20, 
-      description: "[What counts as good structure - based on mark scheme]" 
-    },
-    expression: { 
-      weight: 20, 
-      description: "[What counts as good expression - based on mark scheme]" 
-    }
-  }${totalMarks && totalMarks >= 20 ? `,
-  
-  // === OFFICIAL MARK SCHEME (include if exam-based question) ===
-  officialMarkScheme: {
-    totalMarks: ${totalMarks || 30},
-    gradeBoundaries: [
-      {
-        grade: "9",
-        minMarks: [calculate: ~85-90% of total],
-        maxMarks: ${totalMarks || 30},
-        descriptor: "[Detailed grade 9 descriptor from the mark scheme - what excellence looks like]"
-      },
-      {
-        grade: "8",
-        minMarks: [calculate: ~75-84% of total],
-        maxMarks: [one less than grade 9 min],
-        descriptor: "[Detailed grade 8 descriptor from mark scheme]"
-      },
-      {
-        grade: "7",
-        minMarks: [calculate: ~65-74% of total],
-        maxMarks: [one less than grade 8 min],
-        descriptor: "[Detailed grade 7 descriptor from mark scheme]"
-      },
-      {
-        grade: "6",
-        minMarks: [calculate: ~55-64% of total],
-        maxMarks: [one less than grade 7 min],
-        descriptor: "[Detailed grade 6 descriptor from mark scheme]"
-      },
-      {
-        grade: "5",
-        minMarks: [calculate: ~45-54% of total],
-        maxMarks: [one less than grade 6 min],
-        descriptor: "[Detailed grade 5 descriptor from mark scheme]"
-      },
-      {
-        grade: "4",
-        minMarks: [calculate: ~35-44% of total],
-        maxMarks: [one less than grade 5 min],
-        descriptor: "[Detailed grade 4 descriptor from mark scheme]"
-      }
-    ]
-  }` : ''}
+    content: { weight: 30, description: "[From mark scheme]" },
+    analysis: { weight: 30, description: "[From mark scheme]" },
+    structure: { weight: 20, description: "[From mark scheme]" },
+    expression: { weight: 20, description: "[From mark scheme]" }
+  }
 };
 \`\`\`
 
-## CRITICAL REQUIREMENTS:
-1. DO NOT include "points: X" in any paragraph objects
-2. DO include detailed sourceMaterial at paragraph level if students need specific extracts/passages
-3. DO include originalTask with clear markdown formatting
-4. DO make learningMaterial specific and detailed for each paragraph
-5. DO include officialMarkScheme with holistic grade descriptors if this is exam-based
-6. Ensure all text uses plain ASCII characters only
-7. Make the essay configuration rich, detailed, and educationally valuable
-
-Generate the complete configuration now:`;
+Generate the complete configuration using ONLY plain ASCII characters:`;
 
     content.push({ type: 'text', text: prompt });
     return [{ role: 'user', content }];
+}
+
+function processGradeBoundaries(boundariesText, totalMarks) {
+    if (!boundariesText || !boundariesText.trim()) {
+        return null;
+    }
+
+    // Parse the input to extract grade-mark pairs
+    const lines = boundariesText.split('\n').map(l => l.trim()).filter(l => l);
+    const boundaries = [];
+    
+    for (const line of lines) {
+        // Match patterns like "Grade 9: 36-40" or "9: 36-40" or "Grade A*: 80-100"
+        const match = line.match(/(?:Grade\s+)?([A-Z\d*+]+)\s*:\s*(\d+)(?:\s*-\s*(\d+))?/i);
+        if (match) {
+            const grade = match[1].toUpperCase();
+            const minMark = parseInt(match[2]);
+            const maxMark = match[3] ? parseInt(match[3]) : minMark;
+            boundaries.push({ grade, minMark, maxMark });
+        }
+    }
+
+    if (boundaries.length === 0) {
+        return boundariesText; // Return as-is if we can't parse it
+    }
+
+    // Sort by minMark descending (highest grade first)
+    boundaries.sort((a, b) => b.minMark - a.minMark);
+
+    // Determine grading system (numeric 9-1, A*-U, etc.)
+    const isNumeric = boundaries.every(b => /^\d+$/.test(b.grade));
+    
+    if (isNumeric) {
+        // Fill in missing numeric grades (9, 8, 7, 6, 5, 4, 3, 2, 1)
+        const numericBoundaries = boundaries.map(b => ({
+            ...b,
+            gradeNum: parseInt(b.grade)
+        }));
+
+        const allGrades = [];
+        const knownGrades = new Map(numericBoundaries.map(b => [b.gradeNum, b]));
+
+        // Determine range (usually 9 to 1, but could be different)
+        const maxGrade = Math.max(...numericBoundaries.map(b => b.gradeNum));
+        const minGrade = Math.min(...numericBoundaries.map(b => b.gradeNum));
+
+        for (let grade = maxGrade; grade >= minGrade; grade--) {
+            if (knownGrades.has(grade)) {
+                allGrades.push(knownGrades.get(grade));
+            } else {
+                // Interpolate
+                const interpolated = interpolateGrade(grade, knownGrades, totalMarks);
+                if (interpolated) {
+                    allGrades.push(interpolated);
+                }
+            }
+        }
+
+        // Format output
+        return allGrades.map(g => `Grade ${g.grade}: ${g.minMark}-${g.maxMark} marks`).join('\n');
+    } else {
+        // For letter grades, just return what was provided (interpolation is complex)
+        return boundaries.map(b => `Grade ${b.grade}: ${b.minMark}-${b.maxMark} marks`).join('\n');
+    }
+}
+
+function interpolateGrade(grade, knownGrades, totalMarks) {
+    // Find the nearest known grades above and below
+    let gradeAbove = null;
+    let gradeBelow = null;
+
+    const knownGradeNums = Array.from(knownGrades.keys()).sort((a, b) => b - a);
+    
+    for (const g of knownGradeNums) {
+        if (g > grade && (gradeAbove === null || g < gradeAbove)) {
+            gradeAbove = g;
+        }
+        if (g < grade && (gradeBelow === null || g > gradeBelow)) {
+            gradeBelow = g;
+        }
+    }
+
+    if (gradeAbove !== null && gradeBelow !== null) {
+        // Interpolate between two known grades
+        const upperBound = knownGrades.get(gradeAbove);
+        const lowerBound = knownGrades.get(gradeBelow);
+        
+        const gradeDiff = gradeAbove - gradeBelow;
+        const markDiff = upperBound.minMark - lowerBound.minMark;
+        const markPerGrade = markDiff / gradeDiff;
+        
+        const minMark = Math.round(upperBound.minMark - (gradeAbove - grade) * markPerGrade);
+        const maxMark = Math.round(minMark + markPerGrade - 1);
+        
+        return { grade: grade.toString(), gradeNum: grade, minMark, maxMark };
+    } else if (gradeAbove !== null) {
+        // Extrapolate below the lowest known grade
+        const upperBound = knownGrades.get(gradeAbove);
+        const avgMarkPerGrade = Math.floor(upperBound.minMark / gradeAbove);
+        const minMark = Math.max(0, Math.round(upperBound.minMark - (gradeAbove - grade) * avgMarkPerGrade));
+        const maxMark = Math.round(upperBound.minMark - 1);
+        
+        return { grade: grade.toString(), gradeNum: grade, minMark, maxMark };
+    } else if (gradeBelow !== null) {
+        // Extrapolate above the highest known grade
+        const lowerBound = knownGrades.get(gradeBelow);
+        const avgMarkPerGrade = Math.floor((totalMarks - lowerBound.minMark) / (10 - gradeBelow));
+        const minMark = Math.round(lowerBound.maxMark + 1 + (grade - gradeBelow - 1) * avgMarkPerGrade);
+        const maxMark = Math.min(totalMarks, Math.round(minMark + avgMarkPerGrade - 1));
+        
+        return { grade: grade.toString(), gradeNum: grade, minMark, maxMark };
+    }
+
+    return null;
 }
 
 function extractJavaScript(text) {

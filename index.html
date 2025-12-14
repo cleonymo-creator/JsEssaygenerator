@@ -705,6 +705,17 @@
                     <span class="label-hint">Optional - helps identify the specific exam paper</span>
                     <input type="text" id="paperName" placeholder="e.g., Paper 2 Section B, Component 1">
                 </div>
+
+                <div class="form-group">
+                    <label for="gradeBoundaries">Grade Boundaries</label>
+                    <span class="label-hint">Optional - enter grade thresholds. You can enter just a few grades and the system will interpolate the rest.</span>
+                    <textarea id="gradeBoundaries" style="min-height: 100px;" placeholder="e.g., just enter a few grades:
+Grade 9: 36-40
+Grade 7: 28-31
+Grade 5: 20-23
+
+The system will automatically calculate missing grades (8, 6, 4, etc.)"></textarea>
+                </div>
             </div>
 
             <div class="button-row">
@@ -828,7 +839,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         <div class="section" data-section="4">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">⚙️</span>
+                    <span class="card-icon">⚙️</span>
                     Configuration Options
                 </h2>
 
@@ -1210,6 +1221,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 <p><strong>Exam Board:</strong> ${document.getElementById('examBoard').value || 'Not specified'}</p>
                 <p><strong>Total Marks:</strong> ${document.getElementById('totalMarks').value || 'Not specified'}</p>
                 <p><strong>Time Allowed:</strong> ${document.getElementById('timeAllowed').value ? document.getElementById('timeAllowed').value + ' minutes' : 'Not specified'}</p>
+                <p><strong>Grade Boundaries:</strong> ${document.getElementById('gradeBoundaries').value ? 'Provided' : 'Not specified'}</p>
                 <p><strong>Question:</strong> ${document.getElementById('examQuestion').value.substring(0, 100)}${document.getElementById('examQuestion').value.length > 100 ? '...' : ''}</p>
                 <p><strong>Source Files:</strong> ${uploadedSourceFiles.length > 0 ? uploadedSourceFiles.map(f => f.name).join(', ') : 'None'}</p>
                 <p><strong>Mark Scheme:</strong> ${uploadedMarkSchemeFile ? uploadedMarkSchemeFile.name : (document.getElementById('markScheme').value ? 'Provided (text)' : 'Not provided')}</p>
@@ -1351,6 +1363,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 totalMarks: parseInt(document.getElementById('totalMarks').value),
                 timeAllowed: document.getElementById('timeAllowed').value ? parseInt(document.getElementById('timeAllowed').value) : null,
                 paperName: document.getElementById('paperName').value,
+                gradeBoundaries: document.getElementById('gradeBoundaries').value,
                 examQuestion: document.getElementById('examQuestion').value,
                 sourceMaterial: combinedSourceMaterial,
                 sourceFiles: imageFiles, // Only images now, PDFs converted to text
