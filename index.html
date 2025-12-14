@@ -703,12 +703,77 @@
             color: white;
             border-style: solid;
         }
+
+        /* Auto-fetch grade boundaries */
+        .btn-auto-fetch {
+            background: linear-gradient(135deg, var(--ink) 0%, #2a2a4e 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        .btn-auto-fetch:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(26, 26, 46, 0.3);
+        }
+
+        .btn-auto-fetch:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-auto-fetch .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .auto-fetch-result {
+            background: var(--sage-soft);
+            border: 1px solid var(--sage);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .auto-fetch-result.error {
+            background: var(--accent-soft);
+            border-color: var(--accent);
+        }
+
+        .auto-fetch-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .auto-fetch-info span {
+            background: rgba(0,0,0,0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
     <header>
         <div class="header-content">
-            <h1>📝 Essay Config Generator</h1>
+            <h1>ðŸ“ Essay Config Generator</h1>
             <p class="subtitle">Transform exam questions into guided writing configurations</p>
         </div>
     </header>
@@ -738,7 +803,7 @@
         <div class="section active" data-section="1">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📋</span>
+                    <span class="card-icon">ðŸ“‹</span>
                     Exam Information
                 </h2>
 
@@ -789,7 +854,7 @@
         <div class="section" data-section="2">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">❓</span>
+                    <span class="card-icon">â“</span>
                     Exam Question
                 </h2>
 
@@ -809,7 +874,7 @@
                     <label>Upload Source Documents</label>
                     <span class="label-hint">Optionally upload PDF or image files containing source material</span>
                     <div class="file-upload" id="sourceUpload">
-                        <div class="file-upload-icon">📄</div>
+                        <div class="file-upload-icon">ðŸ“„</div>
                         <div class="file-upload-text">Drop files here or click to browse</div>
                         <div class="file-upload-hint">PDF, PNG, JPG supported (max 10MB)</div>
                         <input type="file" id="sourceFiles" multiple accept=".pdf,.png,.jpg,.jpeg">
@@ -834,7 +899,7 @@
         <div class="section" data-section="3">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">✔</span>
+                    <span class="card-icon">âœ”</span>
                     Mark Scheme
                 </h2>
 
@@ -865,7 +930,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 <div class="tab-content" data-tab-content="upload">
                     <div class="form-group">
                         <div class="file-upload" id="markSchemeUpload">
-                            <div class="file-upload-icon">📋</div>
+                            <div class="file-upload-icon">ðŸ“‹</div>
                             <div class="file-upload-text">Drop mark scheme PDF here or click to browse</div>
                             <div class="file-upload-hint">PDF files supported (max 10MB)</div>
                             <input type="file" id="markSchemeFile" accept=".pdf">
@@ -883,15 +948,25 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📊</span>
+                    <span class="card-icon">ðŸ“Š</span>
                     Grade Boundaries (Optional)
                 </h2>
                 <p style="margin-bottom: 1rem; opacity: 0.8; font-size: 0.95rem;">
                     Provide grade boundaries to generate descriptors based on the mark scheme. For best results, include at least <strong>3 boundaries</strong> (e.g., low, mid, and high grades). Missing boundaries will be interpolated automatically.
                 </p>
 
+                <button type="button" class="btn-auto-fetch" id="autoFetchBtn" onclick="autoFetchGradeBoundaries()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="M21 21l-4.35-4.35"></path>
+                    </svg>
+                    <span id="autoFetchBtnText">Auto-fetch &amp; Scale Grade Boundaries</span>
+                </button>
+
+                <div id="autoFetchResult"></div>
+
                 <div class="boundary-hints" style="background: var(--sage-soft); padding: 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.9rem;">
-                    <strong>💡 Suggested minimum:</strong> Enter boundaries for your lowest passing grade, a middle grade, and the top grade. For example:
+                    <strong>ðŸ’¡ Suggested minimum:</strong> Enter boundaries for your lowest passing grade, a middle grade, and the top grade. For example:
                     <ul style="margin: 0.5rem 0 0 1.5rem; opacity: 0.9;">
                         <li>GCSE: Grade 4, Grade 6, Grade 9</li>
                         <li>A-Level: Grade E, Grade C, Grade A*</li>
@@ -947,7 +1022,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
         <div class="section" data-section="4">
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">⚙️</span>
+                    <span class="card-icon">âš™ï¸</span>
                     Configuration Options
                 </h2>
 
@@ -976,7 +1051,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📝</span>
+                    <span class="card-icon">ðŸ“</span>
                     Review Your Input
                 </h2>
                 <div id="reviewSummary" style="line-height: 1.8;"></div>
@@ -1003,7 +1078,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
 
             <div class="card">
                 <h2 class="card-title">
-                    <span class="card-icon">📄</span>
+                    <span class="card-icon">ðŸ“„</span>
                     Generated Configuration
                 </h2>
                 <pre class="output-preview" id="outputPreview"></pre>
@@ -1032,7 +1107,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
     </div>
 
     <footer>
-        Essay Config Generator • Powered by Claude AI
+        Essay Config Generator â€¢ Powered by Claude AI
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1194,7 +1269,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
                 indicator.className = 'uploaded-file';
                 indicator.style.opacity = '0.7';
             }
-            indicator.innerHTML = `<span class="uploaded-file-icon">⏳</span><span class="uploaded-file-name">${text}</span>`;
+            indicator.innerHTML = `<span class="uploaded-file-icon">â³</span><span class="uploaded-file-name">${text}</span>`;
             container.appendChild(indicator);
         }
 
@@ -1219,7 +1294,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             const container = document.getElementById('sourceFilesList');
             container.innerHTML = uploadedSourceFiles.map((file, index) => `
                 <div class="uploaded-file">
-                    <span class="uploaded-file-icon">${file.extractedText ? '📝' : '📄'}</span>
+                    <span class="uploaded-file-icon">${file.extractedText ? 'ðŸ“' : 'ðŸ“„'}</span>
                     <span class="uploaded-file-name">${file.name}${file.extractedText ? ' (text extracted)' : ''}</span>
                     <button class="uploaded-file-remove" onclick="removeSourceFile(${index})">&times;</button>
                 </div>
@@ -1236,7 +1311,7 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             if (uploadedMarkSchemeFile) {
                 container.innerHTML = `
                     <div class="uploaded-file">
-                        <span class="uploaded-file-icon">${uploadedMarkSchemeFile.extractedText ? '📝' : '📋'}</span>
+                        <span class="uploaded-file-icon">${uploadedMarkSchemeFile.extractedText ? 'ðŸ“' : 'ðŸ“‹'}</span>
                         <span class="uploaded-file-name">${uploadedMarkSchemeFile.name}${uploadedMarkSchemeFile.extractedText ? ' (text extracted)' : ''}</span>
                         <button class="uploaded-file-remove" onclick="removeMarkSchemeFile()">&times;</button>
                     </div>
@@ -1488,6 +1563,171 @@ Level 3 (9-12): Range of punctuation; accuracy of grammar
             });
             // Sort by minMarks descending (highest grade first)
             return boundaries.sort((a, b) => (b.minMarks || 0) - (a.minMarks || 0));
+        }
+
+        // Auto-fetch grade boundaries
+        async function autoFetchGradeBoundaries() {
+            const examBoard = document.getElementById('examBoard').value.trim();
+            const subject = document.getElementById('subject').value.trim();
+            const totalMarks = document.getElementById('totalMarks').value;
+
+            if (!examBoard) {
+                alert('Please enter the Exam Board in Section 1 first');
+                return;
+            }
+            if (!subject) {
+                alert('Please enter the Subject in Section 1 first');
+                return;
+            }
+            if (!totalMarks) {
+                alert('Please enter the Total Marks in Section 1 first');
+                return;
+            }
+
+            // Detect qualification type from subject
+            const subjectLower = subject.toLowerCase();
+            let qualification = '';
+            if (subjectLower.includes('gcse')) {
+                qualification = 'GCSE';
+            } else if (subjectLower.includes('a-level') || subjectLower.includes('a level')) {
+                qualification = 'A-Level';
+            } else if (subjectLower.includes('ib ') || subjectLower.includes('international baccalaureate')) {
+                qualification = 'IB';
+            }
+
+            const btn = document.getElementById('autoFetchBtn');
+            const btnText = document.getElementById('autoFetchBtnText');
+            const resultDiv = document.getElementById('autoFetchResult');
+
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="spinner"></span> Searching...';
+            resultDiv.innerHTML = '';
+
+            try {
+                // Start the search job
+                const startResponse = await fetch('/.netlify/functions/start-grade-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ examBoard, subject, qualification, totalMarks: parseInt(totalMarks) })
+                });
+
+                if (!startResponse.ok) {
+                    throw new Error('Failed to start search: ' + startResponse.status);
+                }
+
+                const { jobId } = await startResponse.json();
+                console.log('Grade boundary search started:', jobId);
+
+                btnText.innerHTML = '<span class="spinner"></span> Searching grade boundaries...';
+
+                // Trigger background processor
+                fetch('/.netlify/functions/process-grade-search-background', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId })
+                }).catch(() => {});
+
+                // Poll for result
+                const result = await pollForGradeResult(jobId, btnText);
+
+                if (result.status === 'error') {
+                    throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error));
+                }
+
+                if (result.result) {
+                    displayGradeBoundaryResult(result.result);
+                } else {
+                    throw new Error('No results returned');
+                }
+
+            } catch (error) {
+                console.error('Grade boundary search error:', error);
+                resultDiv.innerHTML = '<div class="auto-fetch-result error">Search failed: ' + error.message + '. Please enter grade boundaries manually.</div>';
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = 'Auto-fetch & Scale Grade Boundaries';
+            }
+        }
+
+        async function pollForGradeResult(jobId, btnText, maxAttempts = 30, interval = 2000) {
+            for (let i = 0; i < maxAttempts; i++) {
+                await sleep(interval);
+                
+                try {
+                    const response = await fetch('/.netlify/functions/check-job?jobId=' + encodeURIComponent(jobId));
+                    if (response.ok) {
+                        const result = await response.json();
+                        
+                        if (result.status === 'completed' || result.status === 'error') {
+                            return result;
+                        }
+                    }
+                    
+                    const elapsed = Math.round((i + 1) * interval / 1000);
+                    btnText.innerHTML = '<span class="spinner"></span> Searching... (' + elapsed + 's)';
+                } catch (e) {
+                    console.error('Poll error:', e);
+                }
+            }
+            throw new Error('Search timed out');
+        }
+
+        function displayGradeBoundaryResult(result) {
+            const resultDiv = document.getElementById('autoFetchResult');
+            
+            if (result.error || !result.scaledBoundaries || result.scaledBoundaries.length === 0) {
+                resultDiv.innerHTML = '<div class="auto-fetch-result error">Could not find grade boundaries. ' + (result.error || '') + ' Please enter manually.</div>';
+                return;
+            }
+
+            // Build info display
+            let infoHtml = '<div class="auto-fetch-result">';
+            infoHtml += '<div class="auto-fetch-info">';
+            if (result.year) infoHtml += '<span><strong>Year:</strong> ' + result.year + '</span>';
+            if (result.session) infoHtml += '<span><strong>Session:</strong> ' + result.session + '</span>';
+            if (result.component) infoHtml += '<span><strong>Component:</strong> ' + result.component + '</span>';
+            if (result.maxMark) infoHtml += '<span><strong>Original max:</strong> ' + result.maxMark + '</span>';
+            if (result.targetMarks) infoHtml += '<span><strong>Scaled to:</strong> ' + result.targetMarks + ' marks</span>';
+            infoHtml += '</div>';
+            
+            if (result.sourceUrl) {
+                infoHtml += '<div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem;">Source: <a href="' + result.sourceUrl + '" target="_blank" style="color: inherit;">' + result.sourceUrl + '</a></div>';
+            }
+            
+            infoHtml += '<div style="margin-top: 0.75rem; font-weight: 500; color: var(--sage);">Grade boundaries populated below (scaled from original ' + (result.maxMark || '?') + ' marks to ' + result.targetMarks + ' marks)</div>';
+            infoHtml += '</div>';
+            
+            resultDiv.innerHTML = infoHtml;
+
+            // Clear existing boundaries and populate with new ones
+            const container = document.getElementById('gradeBoundariesContainer');
+            container.innerHTML = '';
+
+            result.scaledBoundaries.forEach((b, index) => {
+                const row = document.createElement('div');
+                row.className = 'grade-boundary-row';
+                
+                // Calculate max marks (next grade's min - 1, or totalMarks for top grade)
+                const nextBoundary = result.scaledBoundaries[index + 1];
+                const maxMarks = index === 0 ? result.targetMarks : (result.scaledBoundaries[index - 1].minMarks - 1);
+                
+                row.innerHTML = 
+                    '<div class="form-group" style="flex: 1;">' +
+                        '<label>Grade</label>' +
+                        '<input type="text" class="grade-name" value="' + b.grade + '">' +
+                    '</div>' +
+                    '<div class="form-group" style="flex: 1;">' +
+                        '<label>Min Marks</label>' +
+                        '<input type="number" class="grade-min" value="' + b.minMarks + '" min="0">' +
+                    '</div>' +
+                    '<div class="form-group" style="flex: 1;">' +
+                        '<label>Max Marks</label>' +
+                        '<input type="number" class="grade-max" value="' + maxMarks + '" min="0">' +
+                    '</div>' +
+                    '<button type="button" class="btn-remove-grade" onclick="removeGradeBoundary(this)" title="Remove">&times;</button>';
+                
+                container.appendChild(row);
+            });
         }
 
         function buildPayload() {
