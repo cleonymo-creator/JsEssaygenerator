@@ -49,8 +49,12 @@ exports.handler = async (event, context) => {
             return;
         }
 
-        const config = extractJavaScript(claudeData.content[0].text);
+        let config = extractJavaScript(claudeData.content[0].text);
         console.log('Config generated, length:', config.length);
+
+        // Post-process: inject actual source material and images
+        config = injectSourceContent(config, body);
+        console.log('Source content injected, final length:', config.length);
 
         // Save the result
         await store.setJSON(jobId, {
@@ -216,6 +220,16 @@ ${additionalNotes ? `## TEACHER NOTES\n${additionalNotes}\n` : ''}
 - Max attempts: ${maxAttempts || 3}
 - Teacher password: ${teacherPassword || 'teacher123'}
 
+## DIFFERENTIATED LEARNING MATERIALS
+You MUST create learning materials at THREE difficulty tiers for EACH paragraph:
+1. **Foundation** (GCSE 1-4 / A-Level D-E): Simplified language, step-by-step scaffolding, basic vocabulary, focus on meeting minimum mark scheme criteria (Level 1-2 descriptors)
+2. **Intermediate** (GCSE 5-6 / A-Level C-B): Balanced guidance, some analytical depth, moderate vocabulary, targeting middle mark scheme bands (Level 2-3 descriptors)
+3. **Advanced** (GCSE 7-9 / A-Level A*-A): Sophisticated techniques, nuanced analysis, ambitious vocabulary, examiner insights, targeting top band criteria (Level 3-4 descriptors)
+
+Use the mark scheme level descriptors to inform what each tier should emphasise. For example:
+- If the mark scheme mentions "simple awareness" at Level 1, foundation material should help achieve this
+- If it mentions "compelling, convincing communication" at Level 4, advanced material should target this
+
 ## IMPORTANT FORMATTING RULES
 - Use ONLY plain ASCII characters - no special symbols, checkmarks, emojis, or accented characters
 - Use simple dashes (-) or asterisks (*) for bullet points
@@ -226,6 +240,14 @@ ${hasGradeBoundaries ? `- CRITICAL: You MUST interpolate missing grades and incl
 
 ## TASK
 Generate a complete essay configuration with 4-6 paragraphs. Output ONLY valid JavaScript using this EXACT format:
+
+**CRITICAL: TIERED LEARNING MATERIALS**
+Each paragraph MUST include learningMaterial as an OBJECT with THREE tiers, NOT a single string:
+- foundation: For GCSE grades 1-4 or A-Level grades D/E - simpler language, more scaffolding, basic sentence starters, focus on meeting minimum requirements
+- intermediate: For GCSE grades 5-6 or A-Level grades C/B - balanced guidance, some sophistication, moderate challenge
+- advanced: For GCSE grades 7-9 or A-Level grades A/A* - sophisticated techniques, nuanced analysis, ambitious vocabulary, examiner-level insights
+
+Base the differentiation on the mark scheme levels - foundation material should help students achieve lower band criteria, intermediate for middle bands, and advanced for top band criteria.
 
 \`\`\`javascript
 window.ESSAYS = window.ESSAYS || {};
@@ -242,6 +264,12 @@ window.ESSAYS['[essay-id-here]'] = {
 
 ## Mark Scheme Summary
 [Key criteria]\`,
+  // Source material that students should reference (text extracts, passages, data, etc.)
+  sourceMaterial: \`[Include the full source material text here that students need to reference. This should be the exact text/data provided in the exam.]\`,
+  // Source images array - will be populated with base64 data for maps, diagrams, pictures etc.
+  sourceImages: [
+    // Images will be injected here as: { name: "filename.jpg", caption: "Description", data: "base64..." }
+  ],
   maxAttempts: ${maxAttempts || 3},
   minWordsPerParagraph: ${minWords || 80},
   targetWordsPerParagraph: ${targetWords || 150},
@@ -251,39 +279,73 @@ window.ESSAYS['[essay-id-here]'] = {
       id: 1,
       title: "Introduction",
       type: "introduction",
-      learningMaterial: \`## Writing Your Introduction
+      learningMaterial: {
+        foundation: \`## Writing Your Introduction (Foundation)
 
-[Detailed, specific guidance for this essay...]
+[Clear, accessible guidance with simple steps...]
 
-### Key Points to Cover
-- [Specific point 1]
-- [Specific point 2]
+### What You Need to Include
+- [Basic point 1 in simple terms]
+- [Basic point 2 in simple terms]
+
+### Helpful Sentence Starters
+- "This essay will explore..."
+- "The main idea is..."
+\`,
+        intermediate: \`## Writing Your Introduction (Intermediate)
+
+[More detailed guidance with some sophistication...]
+
+### Key Elements to Include
+- [Point 1 with more detail]
+- [Point 2 with analytical focus]
 
 ### Sentence Starters
-- "[Relevant starter]..."
+- "This essay will argue that..."
+- "By examining [X], it becomes clear that..."
 \`,
+        advanced: \`## Writing Your Introduction (Advanced)
+
+[Sophisticated guidance focusing on top-band criteria...]
+
+### Crafting a Compelling Opening
+- [Advanced technique 1]
+- [Nuanced analytical approach]
+
+### Ambitious Openings
+- "Through a nuanced examination of..."
+- "The complex interplay between..."
+\`
+      },
       writingPrompt: "[Clear instruction]",
       keyPoints: ["[Mark scheme criterion]"],
-      exampleQuotes: [],
-      points: [marks]
+      exampleQuotes: []
     },
-    // More body paragraphs with detailed guidance...
+    // More body paragraphs - EACH must have learningMaterial as an object with foundation, intermediate, advanced keys
     {
       id: [n],
       title: "Conclusion",
       type: "conclusion",
-      learningMaterial: \`## Writing Your Conclusion
-
-[Specific guidance]
+      learningMaterial: {
+        foundation: \`## Writing Your Conclusion (Foundation)
+[Simple, clear guidance...]
 \`,
+        intermediate: \`## Writing Your Conclusion (Intermediate)
+[Balanced guidance...]
+\`,
+        advanced: \`## Writing Your Conclusion (Advanced)
+[Sophisticated guidance...]
+\`
+      },
       writingPrompt: "[Instruction]",
       keyPoints: ["[Criterion]"],
-      exampleQuotes: [],
-      points: [marks]
+      exampleQuotes: []
     }
   ],${gradingSection}
 };
 \`\`\`
+
+REMEMBER: Every paragraph's learningMaterial MUST be an object with foundation, intermediate, and advanced keys - NOT a string.
 
 Generate the complete configuration using ONLY plain ASCII characters:`;
 
@@ -297,4 +359,59 @@ function extractJavaScript(text) {
     const configMatch = text.match(/(window\.ESSAY_CONFIG[\s\S]*};?)/);
     if (configMatch) return configMatch[1].trim();
     return text.trim();
+}
+
+function injectSourceContent(config, body) {
+    const { sourceMaterial, sourceFiles } = body;
+    
+    // Escape special characters for JavaScript template literal
+    function escapeForTemplateLiteral(str) {
+        if (!str) return '';
+        return str
+            .replace(/\\/g, '\\\\')
+            .replace(/`/g, '\\`')
+            .replace(/\$\{/g, '\\${');
+    }
+    
+    // Inject source material text
+    if (sourceMaterial && sourceMaterial.trim()) {
+        const escapedMaterial = escapeForTemplateLiteral(sourceMaterial.trim());
+        // Replace the placeholder with actual content
+        config = config.replace(
+            /sourceMaterial:\s*`\[Include the full source material text here[^\`]*\]`/,
+            `sourceMaterial: \`${escapedMaterial}\``
+        );
+    } else {
+        // No source material - set to empty string
+        config = config.replace(
+            /sourceMaterial:\s*`\[Include the full source material text here[^\`]*\]`/,
+            `sourceMaterial: \`\``
+        );
+    }
+    
+    // Inject source images
+    if (sourceFiles && sourceFiles.length > 0) {
+        const imageObjects = sourceFiles
+            .filter(f => f.type && f.type.startsWith('image/') && f.content)
+            .map(f => ({
+                name: f.name,
+                type: f.type,
+                caption: f.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+                data: f.content
+            }));
+        
+        if (imageObjects.length > 0) {
+            const imagesArrayStr = JSON.stringify(imageObjects, null, 4)
+                .split('\n')
+                .map((line, i) => i === 0 ? line : '  ' + line)
+                .join('\n');
+            
+            config = config.replace(
+                /sourceImages:\s*\[\s*\/\/[^\]]*\]/,
+                `sourceImages: ${imagesArrayStr}`
+            );
+        }
+    }
+    
+    return config;
 }
